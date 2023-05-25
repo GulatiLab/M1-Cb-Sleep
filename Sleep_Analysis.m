@@ -1,6 +1,6 @@
 clear;clc;close all;
 
-%I089 has no sleep blocks on days 4 or 5. I110 have no sleep at all
+%I089 has no sleep blocks on days 4 or 5. I110 has no sleep at all
 animal = 'I122';
 
 % HPC/Unix compatability
@@ -196,12 +196,13 @@ else
     error('Unrecognized animal.')
 end
     
+% Common parameter values
 param.s_block_names = {'Sleep1' 'Sleep2'};
 param.sleep_blocks = length(param.s_block_names);
 save([rootpath,animal,'/Parameters.mat'], 'param');
+param.epoch_length = 6; %In seconds (unused)
 
 
-param.epoch_length = 6; %In seconds
           %TD: TODO, MF: memory failure, L: long, RM: requires one (or more) of the main analyses 
           % A: Analysis method 1 (do not use), B: Analysis method 2 (3rd-party code)(use this), 2: Analyses that need something specified (a trial, a channel, etc.).
           %     A            B        TD A                         MF?       2  2 TD MF  L    TD  L  L           L     2     2              
@@ -214,7 +215,7 @@ if enabled(1)
     disp('Block 1...')
     for day = 1:param.days
         load([origin_rootpath,animal,'/',param.durFiles(day,:),'.mat']);
-        dM_idx = 0;
+        dM_idx = 0; %durMAT index
         for block = 1:param.sleep_blocks
             if ~exist([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block}],'dir')
                 mkdir([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block}]);
@@ -234,10 +235,12 @@ if enabled(1)
                 load([origin_rootpath,animal,'/',param.Wave_path,'/',sbn(sub_block,:),'/WAV.mat']);
                 param.Wave_Fs = Fs_wave;
                 
+                %Determine index to truncate at
                 M1_truncation_samp = floor(durMAT(5,dM_idx)*param.M1_Fs);
                 Cb_truncation_samp = floor(durMAT(5,dM_idx)*param.Cb_Fs);
                 Wave_truncation_samp = floor(durMAT(5,dM_idx)*param.Wave_Fs);
                 
+                %Truncate
                 M1_LFP_t = cat(2, M1_LFP_t, LFPs1(:,1:M1_truncation_samp));
                 Cb_LFP_t = cat(2, Cb_LFP_t, LFPs2(:,1:Cb_truncation_samp));
                 WAVE1_t = cat(2, WAVE1_t, Wave1(1:Wave_truncation_samp));
@@ -259,23 +262,25 @@ if enabled(1)
 end
 
 %% Select Bad Channels (2)
-
+% You can use this to select a new set of bad channels but you'll almost always want to just use the same channels as in main_analysis.m.
+% To do that set use_existing_bad_chans to true.
 if enabled(2)
     disp('Block 2...')
     all_M1_sleep_bad_chans = [];
     all_Cb_sleep_bad_chans = [];
     use_existing_bad_chans = true;
     
+    %Use the list of ban channels from main_analysis
     if use_existing_bad_chans
         param.M1_sleep_bad_chans = param.M1_bad_chans;
         param.Cb_sleep_bad_chans = param.Cb_bad_chans;
-        
+    %Select bad channels as you would in main_analysis
     else
         for day = 1:param.days
             for block = 1:param.sleep_blocks
                 load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/LFP_M1_Truncated.mat']);
                 load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/LFP_Cb_Truncated.mat']);
-                
+                %User must examine channel LFPs visually and identify bad channels using command window
                 hold on
                 for c = 1:size(M1_LFP_t,1)
                     plot(M1_LFP_t(c,1:min(2000000,size(M1_LFP_t,2)))+(c*0.001))
@@ -294,8 +299,8 @@ if enabled(2)
                 close all
                 hold off
             end
-            
         end
+        %Displays a count of how many times each channel was marked as bad and prompts user for the finalized list of bad channels
         [ct, ch] = hist(all_M1_sleep_bad_chans,unique(all_M1_sleep_bad_chans));
         disp('M1: Surround the channels you wish to exclude with square brackets. Press return when done.')
         disp(ch)
@@ -308,6 +313,7 @@ if enabled(2)
         disp(ct)
         param.Cb_sleep_bad_chans = sort(input(''));
     end
+    %Record and save
     param.M1_sleep_good_chans = 1:param.M1_chans;
     param.M1_sleep_good_chans(param.M1_sleep_bad_chans) = [];
     
@@ -320,9 +326,10 @@ if enabled(2)
 end
 
 %% Split LFPs into epochs (3)
-
+% Blocks 3 through 8 were my attempt to replicated the Jaekyung code which we eventually got access to for ourselves.
 if enabled(3)
     disp('Block 3...')
+    error('Blocks 3 through 8 should not be used. Use 9, 10, and 11 instead.')
     reSort_epochs = false;
     for day = 1:param.days
         for block = 1:param.sleep_blocks
@@ -370,9 +377,10 @@ if enabled(3)
 end
 
 %% Review Bad Epochs(4)
-
+% Blocks 3 through 8 were my attempt to replicated the Jaekyung code which we eventually got access to for ourselves.
 if enabled(4)
     disp('Block 4...')
+    error('Blocks 3 through 8 should not be used. Use 9, 10, and 11 instead.')
     days = [5];
     blocks = [2];
     for day = days
@@ -394,9 +402,10 @@ if enabled(4)
 end
 
 %% Calculate power spectral density using eeglab (5)
-
+% Blocks 3 through 8 were my attempt to replicated the Jaekyung code which we eventually got access to for ourselves.
 if enabled(5)
     disp('Block 5...')
+    error('Blocks 3 through 8 should not be used. Use 9, 10, and 11 instead.')
     addpath(genpath('Z:\Matlab for analysis\eeglab\functions'))
     for day = 1:param.days
         for block = 1:param.sleep_blocks
@@ -472,9 +481,10 @@ if enabled(5)
 end
 
 %% Classify sleep as NREM and REM (6)
-
+% Blocks 3 through 8 were my attempt to replicated the Jaekyung code which we eventually got access to for ourselves.
 if enabled(6)
     disp('Block 6...')
+    error('Blocks 3 through 8 should not be used. Use 9, 10, and 11 instead.')
     check_clusters = false;
     delta_SO = [0.1 4]; %Hz
     gamma = [30 60]; %Hz
@@ -549,9 +559,10 @@ if enabled(6)
 end
 
 %% Detect Peaks, Throughs and Zero-crossing from a filtered average M1-Cb LFP(7)
-
+% Blocks 3 through 8 were my attempt to replicated the Jaekyung code which we eventually got access to for ourselves.
 if enabled(7)
     disp('Block 7...')
+    error('Blocks 3 through 8 should not be used. Use 9, 10, and 11 instead.')
     zci = @(v) find(v(:).*circshift(v(:), [-1 0]) <= 0); %zero-crossing detection function
     std_factor = 0.21;
     for day = 1:param.days
@@ -642,9 +653,10 @@ if enabled(7)
 end
 
 %% Detect spindles from average M1-Cb LFPs(8)
-
+% Blocks 3 through 8 were my attempt to replicated the Jaekyung code which we eventually got access to for ourselves.
 if enabled(8)
     disp('Block 8...')
+    error('Blocks 3 through 8 should not be used. Use 9, 10, and 11 instead.')
     spindle_dur = 0.5; %seconds
     for day = 1:param.days
         for block = 1:param.sleep_blocks
@@ -876,6 +888,7 @@ if enabled(9)
             if exist([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Channel_Sleep_data.mat'],'file')
                 success = false;
                 fails = 0;
+                %The files loaded here are so big that there is a significant chance that loading them will fail. This gives a few automatic retries
                 while fails < 5 && ~success
                     try
                         load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Channel_Sleep_data.mat'])
@@ -892,24 +905,24 @@ if enabled(9)
                 M1_channel_data = struct();
                 Cb_channel_data = struct();
             end
-            
+            %Get mean LFP
             M1_data.LFP = double(mean(M1_LFP_t(param.M1_sleep_good_chans,:),1)');
             M1_data.Fs_LFP = param.M1_Fs;
             Cb_data.LFP = double(mean(Cb_LFP_t(param.Cb_sleep_good_chans,:),1)');
             Cb_data.Fs_LFP = param.Cb_Fs;
-            
+            %Get mean individual channel LFPs
             M1_channel_data.LFP = double(M1_LFP_t(param.M1_sleep_good_chans,:)');
             M1_channel_data.Fs_LFP = param.M1_Fs;
             Cb_channel_data.LFP = double(Cb_LFP_t(param.Cb_sleep_good_chans,:)');
             Cb_channel_data.Fs_LFP = param.Cb_Fs;
-            
+            %Sleep classification
             [sleep_idx_M1, artifact_idx_M1, M1_data.pwr_out_M1] = sleep_classification2(M1_data.LFP,1,M1_data.Fs_LFP);
             saveas(gcf, [rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_Classification_M1.fig']);
             close all
             [sleep_idx_Cb, artifact_idx_Cb, Cb_data.pwr_out_Cb] = sleep_classification2(Cb_data.LFP,1,Cb_data.Fs_LFP);
             saveas(gcf, [rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_Classification_Cb.fig']);
             close all
-            
+            %Save sleep and artifact identifications
             M1_data.artifact_idx = artifact_idx_M1 | artifact_idx_Cb;
             M1_data.sleep_idx = sleep_idx_M1;
             Cb_data.artifact_idx = M1_data.artifact_idx;
@@ -940,22 +953,26 @@ if enabled(10)
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_data.mat']);
-            
+            %M1
+            %Slow oscillation and delta wave detection 
             M1_data.so_delta=detect_so_delta(M1_data.LFP,M1_data.Fs_LFP,...
                 'sleep_idx',M1_data.sleep_idx,...
                 'artifact_idx',M1_data.artifact_idx,...
                 'PLOT',1,...
                 'mnl_parm',[85 40 .15 .5]);
+            %Save the figure created by detect_so_delta()
             figHandles = findobj('Type', 'figure');
             saveas(figHandles(1),[rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/M1_',get(figHandles(1),'Name'),'_Waves.fig'])
             saveas(figHandles(2),[rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/M1_',get(figHandles(2),'Name'),'_Waves.fig'])
             close all;
-            
+            %M1
+            %Slow oscillation and delta wave detection 
             Cb_data.so_delta=detect_so_delta(Cb_data.LFP,Cb_data.Fs_LFP,...
                 'sleep_idx',Cb_data.sleep_idx,...
                 'artifact_idx',Cb_data.artifact_idx,...
                 'PLOT',1,...
                 'mnl_parm',[85 40 .15 .5]);
+            %Save the figure created by detect_so_delta()
             figHandles = findobj('Type', 'figure');
             saveas(figHandles(1),[rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Cb_',get(figHandles(1),'Name'),'_Waves.fig'])
             saveas(figHandles(2),[rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Cb_',get(figHandles(2),'Name'),'_Waves.fig'])
@@ -963,6 +980,7 @@ if enabled(10)
             
             save([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_data.mat'], 'M1_data', 'Cb_data')
             
+            %Slow oscillation and delta wave detection for individual M1 channels
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Channel_Sleep_data.mat'])
             for M1_chan = 1:size(M1_channel_data.LFP,2)
                 M1_channel_data.so_delta(:,M1_chan)=detect_so_delta(M1_channel_data.LFP(:,M1_chan),M1_channel_data.Fs_LFP,...
@@ -972,6 +990,7 @@ if enabled(10)
                     'mnl_parm',[85 40 .15 .5]);
                 close all;
             end
+            %Slow oscillation and delta wave detection for individual M1 channels
             for Cb_chan = 1:size(Cb_channel_data.LFP,2)
                 Cb_channel_data.so_delta(:,Cb_chan)=detect_so_delta(Cb_channel_data.LFP(:,Cb_chan),Cb_channel_data.Fs_LFP,...
                     'sleep_idx',Cb_channel_data.sleep_idx,...
@@ -998,7 +1017,7 @@ if enabled(11)
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_data.mat']);
-            
+            %Detect Spindles and save created figures
             M1_data.spindles = detect_spindles( mat2cell(M1_data.LFP, length(M1_data.LFP), [1]),...
                 'Fs',M1_data.Fs_LFP,...
                 'sleep_idx',mat2cell(M1_data.sleep_idx, length(M1_data.LFP), [1]),...
@@ -1018,7 +1037,7 @@ if enabled(11)
             close all;
             
             save([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_data.mat'], 'M1_data', 'Cb_data')
-            
+            %Detect Spindles for individual channels
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Channel_Sleep_data.mat'])
             for M1_chan = 1:size(M1_channel_data.LFP,2)
                 M1_channel_data.spindles(:,M1_chan) = detect_spindles( mat2cell(M1_channel_data.LFP(:,M1_chan), size(M1_channel_data.LFP,1), [1]),...
@@ -1054,7 +1073,7 @@ if enabled(11)
 end
 
 %% Get Sleep/wake indexes (12)
-%Classify all LFP into sleep/wake. After that it will be easy to implemnt whether or not wake should override NREM.
+%Preliminary code to classify the entire LFP into sleep/wake using the sleep video. Unfinished and unused.
 
 if enabled(12)
     disp('Block 12...')
@@ -1078,9 +1097,10 @@ if enabled(12)
 end
 
 %% Get spindles Frequency(13)
-
+% Blocks 13 through 19 use the data format output by the blocks 3 through 8. All of it ended up unused.
 if enabled(13)
     disp('Block 13...')
+    error('Blocks 13 through 19 should not be used.')
     for day = 1:param.days
         spindle_freq_M1 = zeros(1,param.sleep_blocks);
         spindle_freq_Cb = zeros(1,param.sleep_blocks);
@@ -1128,9 +1148,10 @@ if enabled(13)
 end
 
 %% Detect Slow-Oscillations and Delta waves timestamps (14)
-
+% Blocks 13 through 19 use the data format output by the blocks 3 through 8. All of it ended up unused.
 if enabled(14)
     disp('Block 14...')
+    error('Blocks 13 through 19 should not be used.')
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Events_Sleep.mat']);
@@ -1252,9 +1273,10 @@ if enabled(14)
 end
 
 %% Classify LFP into Slow-Oscillations and Delta oscillations(15)
-
+% Blocks 13 through 19 use the data format output by the blocks 3 through 8. All of it ended up unused.
 if enabled(15)
     disp('Block 15...')
+    error('Blocks 13 through 19 should not be used.')
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Events_SOD_Sleep.mat']);
@@ -1355,9 +1377,10 @@ if enabled(15)
 end
 
 %% Detect Nested spindles(16)
-
+% Blocks 13 through 19 use the data format output by the blocks 3 through 8. All of it ended up unused.
 if enabled(16)
     disp('Block 16...')
+    error('Blocks 13 through 19 should not be used.')
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/spindles_Sleep.mat']);
@@ -1463,9 +1486,10 @@ if enabled(16)
 end
 
 %% Get frequency of Slow and Delta oscillations from block1 to block2 (17)
-
+% Blocks 13 through 19 use the data format output by the blocks 3 through 8. All of it ended up unused.
 if enabled(17)
     disp('Block 17...')
+    error('Blocks 13 through 19 should not be used.')
     for day = 1:param.days
         SO_Freq_M1 = zeros(1,param.sleep_blocks);
         SO_Freq_Cb = zeros(1,param.sleep_blocks);
@@ -1537,9 +1561,10 @@ if enabled(17)
 end
 
 %% Get Nested spindle Frequency (18)
-
+% Blocks 13 through 19 use the data format output by the blocks 3 through 8. All of it ended up unused.
 if enabled(18)
     disp('Block 18...')
+    error('Blocks 13 through 19 should not be used.')
     for day = 1:param.days
         nested_spindle_freq_M1 = zeros(1,param.sleep_blocks);
         nested_spindle_freq_Cb = zeros(1,param.sleep_blocks);
@@ -1591,9 +1616,10 @@ if enabled(18)
 end
 
 %% Plot Block LFP with 'bad', 'REM/Wake', and 'NREM' identifiers (19)
-
+% Blocks 13 through 19 use the data format output by the blocks 3 through 8. All of it ended up unused.
 if enabled(19)
     disp('Block 19...')
+    error('Blocks 13 through 19 should not be used.')
     day = 1;
     block = 1;
     area = 'M1';
@@ -1658,7 +1684,9 @@ if enabled(19)
 end
 
 %% Rename Spike Timestamp Data (19.5)
-
+% Used to bring older data into the same file naming format and newer data. I opted for this in the sleep analysis rather than the 
+% conditional approach I used in main_analysis becasue I felt it would make it easier to understand and use if I ever needed
+% to revisit the code after a long time of not working with it.
 if false
     addpath(genpath('Z:\BMI_Analysis'))
     addpath(genpath('Z:\Matlab Offline Files SDK'))
@@ -1721,6 +1749,7 @@ if enabled(20)
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_data.mat'])
             M1_filt_data = M1_data;
             Cb_filt_data = Cb_data;
+            %Filter
             M1_filt_data.LFP = eegfilt(M1_data.LFP', M1_data.Fs_LFP, M1_spindle_band(1), M1_spindle_band(2));
             Cb_filt_data.LFP = eegfilt(Cb_data.LFP', Cb_data.Fs_LFP, Cb_spindle_band(1), Cb_spindle_band(2));
             
@@ -1744,6 +1773,7 @@ if enabled(21)
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_data.mat'])
             load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Spike_timestamps.mat']);
 
+            %Get oscillation indexes
             delta_idxs = round(M1_data.Fs_LFP * M1_data.so_delta.delta_up_states);
             so_idxs = round(M1_data.Fs_LFP * M1_data.so_delta.so_up_states);
             spindle_idxs = round(M1_data.Fs_LFP * M1_data.spindles{1}.pks);
@@ -1881,10 +1911,12 @@ if enabled(21)
             spindle_Cb_hist = Cb_hist;
             save([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/spindle_data.mat'], 'spindle_cross_corrs', 'spindle_M1_hist', 'spindle_Cb_hist', '-v7.3')
             
+            %Calculate mean correlations
             mean_delta_corr = squeeze(mean(mean(mean(delta_cross_corrs,1),2),3));
             mean_so_corr = squeeze(mean(mean(mean(so_cross_corrs,1),2),3));
             mean_spindle_corr = squeeze(mean(mean(mean(spindle_cross_corrs,1),2),3));
             
+            %Plot mean correlations
             ss_fit = fit((1:length(mean_delta_corr))', mean_delta_corr, 'smoothingspline', 'SmoothingParam', param.smoothing_param);
             smooth_delta_corr = ss_fit(1:length(mean_delta_corr));
             line(1:length(mean_delta_corr), mean_delta_corr, 'Color', [.7 .7 .7])
@@ -1917,7 +1949,10 @@ if enabled(22)
     disp('Block 22...')
     addpath(genpath('Z:\Matlab for analysis\eeglab\functions'))
     rmpath(genpath('Z:\Matlab for analysis\eeglab\functions\octavefunc\signal'))
-    cross_area_bool = false;
+    %Parameters
+    cross_area_bool = true; %Use cross-area spindles
+    nested_only_bool = false; %Use only spindles that are SO-nested
+    nesting_threshold = 1.5;
     max_idx_err = inf;
     pre_cycles = 5;
     post_cycles = 5;
@@ -1925,12 +1960,18 @@ if enabled(22)
     Cb_ref_to_use = 'Cb_spin'; %Options: 'Cb_spin', 'M1_spin', 'nearest_Cb_peak'  -  
     control_offsets = [-5, -10];
     
-    if cross_area_bool
-        save_name_add = '_cross';
-    else
-        save_name_add = '';
+    %Enabled options modify the filenames of the saved data.
+    save_name_add = '';
+    if nested_only_bool %Use only spindles nested in slow oscilations
+        save_name_add = [save_name_add, '_nested'];
+    end
+    if cross_area_bool %Cross results have the same source area for neurons but crossed LFP/spindles. 
+        save_name_add = [save_name_add, '_cross'];
     end
     
+    % Cb_spin: use the peak of Cb spindles, 
+    % M1_spin: use the peaks of M1 spindles, 
+    % nearest_Cb_peak: use the peaks in the filtered Cb LFP nearest to the peaks of M1 spindles
     if ~any(strcmp(Cb_ref_to_use, {'Cb_spin', 'M1_spin', 'nearest_Cb_peak'}))
         error('Unrecognized Cb reference option')
     end
@@ -1940,6 +1981,8 @@ if enabled(22)
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Filtered_Sleep_data.mat'])
             load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Spike_timestamps.mat']);
             
+            %The cross-area option was added after the code for the standard analysis was finished.
+            %The simplest way to implement this new option was to swap the names of the LFP/spindle data
             if cross_area_bool
                 data_temp = M1_filt_data;
                 M1_filt_data = Cb_filt_data;
@@ -1949,8 +1992,16 @@ if enabled(22)
             
             for offset = [0, control_offsets]
                 
-                M1_spindle_idxs = round(M1_filt_data.Fs_LFP * (M1_filt_data.spindles{1}.pks + offset));
+                %Use only peaks of nested spindles if the option is enabled
+                if nested_only_bool
+                    pks = M1_filt_data.spindles{1}.pks;
+                    pks = pks(find_nested(M1_filt_data.so_delta.so_up_states, pks, nesting_threshold));
+                    M1_spindle_idxs = round(M1_filt_data.Fs_LFP * (pks + offset));
+                else
+                    M1_spindle_idxs = round(M1_filt_data.Fs_LFP * (M1_filt_data.spindles{1}.pks + offset));
+                end
                 
+                %Extract phase data
                 hilbert_LFP = hilbert(M1_filt_data.LFP);
                 inst_phase = unwrap(angle(hilbert_LFP));%inst phase
                 M1_radial_phase = mod(inst_phase,2*pi);
@@ -1968,10 +2019,19 @@ if enabled(22)
                     end
                 end
                 
+                %Cb spindle source implementations 
                 if strcmp(Cb_ref_to_use, 'Cb_spin')
                     
-                    Cb_spindle_idxs = round(Cb_filt_data.Fs_LFP * (Cb_filt_data.spindles{1}.pks + offset));
+                    %Use only peaks of nested spindles if the option is enabled
+                    if nested_only_bool
+                        pks = Cb_filt_data.spindles{1}.pks;
+                        pks = pks(find_nested(Cb_filt_data.so_delta.so_up_states, pks, nesting_threshold));
+                        Cb_spindle_idxs = round(Cb_filt_data.Fs_LFP * (pks + offset));
+                    else
+                        Cb_spindle_idxs = round(Cb_filt_data.Fs_LFP * (Cb_filt_data.spindles{1}.pks + offset));
+                    end
                     
+                    %Extract phase data
                     hilbert_LFP = hilbert(Cb_filt_data.LFP);
                     inst_phase = unwrap(angle(hilbert_LFP));%inst phase
                     Cb_radial_phase = mod(inst_phase,2*pi);
@@ -1990,19 +2050,21 @@ if enabled(22)
                     end
                 
                 elseif strcmp(Cb_ref_to_use, 'M1_spin')
+                    %Use M1 data
                     Cb_spindle_idxs = M1_spindle_idxs;
                     Cb_peak_idxs = M1_peak_idxs;
                 
                 elseif strcmp(Cb_ref_to_use, 'nearest_Cb_peak')
+                    %Use M1 peak index
                     Cb_spindle_idxs = nan(size(M1_spindle_idxs));
-                    
+                    %Extract Cb phase data
                     hilbert_LFP = hilbert(Cb_filt_data.LFP);
                     inst_phase = unwrap(angle(hilbert_LFP));%inst phase
                     Cb_radial_phase = mod(inst_phase,2*pi);
                     Cb_peaks = diff(Cb_radial_phase) < 0;
                     
                     Cb_peak_idxs = find(Cb_peaks);
-                    
+                    %align M1 spindle_indexes with a Cb peak
                     for i = 1:length(M1_spindle_idxs)
                         possible_Cb_centers = Cb_peak_idxs(Cb_peak_idxs >= round(((M1_peak_idxs(M1_spindle_idxs(i))/param.M1_Fs) - Cb_center_window(1)) * param.Cb_Fs) & Cb_peak_idxs <= round(((M1_peak_idxs(M1_spindle_idxs(i))/param.M1_Fs) + Cb_center_window(2)) * param.Cb_Fs));
                         [~, center_idx] = max(Cb_filt_data.LFP(possible_Cb_centers));
@@ -2011,7 +2073,7 @@ if enabled(22)
                     Cb_spindle_idxs(isnan(Cb_spindle_idxs)) = [];
                 end
                 
-                
+                %Preallocation
                 prePeak_cycle_phases_M1_spindles_M1_spikes = cell(param.M1_chans,param.M1_neurons,pre_cycles);
                 postPeak_cycle_phases_M1_spindles_M1_spikes = cell(param.M1_chans,param.M1_neurons,post_cycles);
                 prePeak_cycle_phases_Cb_spindles_Cb_spikes = cell(param.Cb_chans,param.Cb_neurons,pre_cycles);
@@ -2020,12 +2082,14 @@ if enabled(22)
                 for M1_spin_idx = M1_spindle_idxs'
                     for chan = 1:param.M1_chans
                         for neuron = 1:param.M1_neurons
+                            %Collect data for M1 spindle cycles before the spindle center
                             for cycle = 1:pre_cycles
                                 cycle_start = M1_peak_idxs(M1_spin_idx - cycle)/param.M1_Fs;
                                 cycle_end = M1_peak_idxs(M1_spin_idx - (cycle-1))/param.M1_Fs;
                                 cycle_spikes = M1_spike_timestamps{chan,neuron}(M1_spike_timestamps{chan,neuron} >= cycle_start & M1_spike_timestamps{chan,neuron} <= cycle_end);
                                 prePeak_cycle_phases_M1_spindles_M1_spikes{chan,neuron,cycle} = cat(2,prePeak_cycle_phases_M1_spindles_M1_spikes{chan,neuron,cycle},M1_radial_phase(round(cycle_spikes*param.M1_Fs)));
                             end
+                            %Collect data for M1 spindle cycles after the spindle center
                             for cycle = 1:post_cycles
                                 cycle_start = M1_peak_idxs(M1_spin_idx + (cycle-1))/param.M1_Fs;
                                 cycle_end = M1_peak_idxs(M1_spin_idx + cycle)/param.M1_Fs;
@@ -2039,12 +2103,14 @@ if enabled(22)
                 for Cb_spin_idx = Cb_spindle_idxs'                   
                     for chan = 1:param.Cb_chans
                         for neuron = 1:param.Cb_neurons
+                            %Collect data for Cb spindle cycles before the spindle center
                             for cycle = 1:pre_cycles
                                 cycle_start = Cb_peak_idxs(Cb_spin_idx - cycle)/param.Cb_Fs;
                                 cycle_end = Cb_peak_idxs(Cb_spin_idx - (cycle-1))/param.Cb_Fs;
                                 cycle_spikes = Cb_spike_timestamps{chan,neuron}(Cb_spike_timestamps{chan,neuron} >= cycle_start & Cb_spike_timestamps{chan,neuron} <= cycle_end);
                                 prePeak_cycle_phases_Cb_spindles_Cb_spikes{chan,neuron,cycle} = cat(2,prePeak_cycle_phases_Cb_spindles_Cb_spikes{chan,neuron,cycle},Cb_radial_phase(round(cycle_spikes*param.M1_Fs)));
                             end
+                            %Collect data for Cb spindle cycles after the spindle center
                             for cycle = 1:post_cycles
                                 cycle_start = Cb_peak_idxs(Cb_spin_idx + (cycle-1))/param.M1_Fs;
                                 cycle_end = Cb_peak_idxs(Cb_spin_idx + cycle)/param.M1_Fs;
@@ -2072,15 +2138,20 @@ end
 if enabled(23)
     disp('Block 23...')
     % for each neuron and each cycle (different days have different neurons, different blocks of the same day have the same neurons)
-    %    One each of mean spike count (spike count sum / spindle count), prefered phase (phase of the averaged vectors), and phase locking value(length of the averaged vectors)
-    
+    % One each of mean spike count (spike count sum / spindle count), prefered phase (phase of the averaged vectors), and phase locking value(length of the averaged vectors)
+    % Parameters
     addpath(genpath('Z:\Matlab for analysis'))
-    cross_area_bool = false;
+    cross_area_bool = false; %Use cross-area spindles
+    nested_only_bool = false; %Use only spindles that are SO-nested
+    nesting_threshold = 1.5;
+    control_offsets = [-5, -10];
     
-    if cross_area_bool
-        save_name_add = '_cross';
-    else
-        save_name_add = '';
+    save_name_add = '';
+    if nested_only_bool 
+        save_name_add = [save_name_add, '_nested'];
+    end
+    if cross_area_bool %Cross results have the same source area for neurons but crossed LFP/spindles. 
+        save_name_add = [save_name_add, '_cross'];
     end
     
     load([rootpath,animal,'/Day1/',param.s_block_names{1},'/Spindle_spike_phasestamps', save_name_add, '.mat'])
@@ -2088,27 +2159,16 @@ if enabled(23)
     pre_cycles = size(prePeak_cycle_phases_M1_spindles_M1_spikes,3);
     post_cycles = size(postPeak_cycle_phases_M1_spindles_M1_spikes,3);
     
-    if cross_area_bool
-        shared_data.M1_spindle_cycle_spike_counts_cross = cell(1,param.days);
-        shared_data.M1_spindle_cycle_prefered_phases_cross = cell(1,param.days);
-        shared_data.M1_spindle_cycle_phase_locking_values_cross = cell(1,param.days);
-        shared_data.Cb_spindle_cycle_spike_counts_cross = cell(1,param.days);
-        shared_data.Cb_spindle_cycle_prefered_phases_cross = cell(1,param.days);
-        shared_data.Cb_spindle_cycle_phase_locking_values_cross = cell(1,param.days);
-    else
-        shared_data.M1_spindle_cycle_spike_counts = cell(1,param.days);
-        shared_data.M1_spindle_cycle_prefered_phases = cell(1,param.days);
-        shared_data.M1_spindle_cycle_phase_locking_values = cell(1,param.days);
-        shared_data.Cb_spindle_cycle_spike_counts = cell(1,param.days);
-        shared_data.Cb_spindle_cycle_prefered_phases = cell(1,param.days);
-        shared_data.Cb_spindle_cycle_phase_locking_values = cell(1,param.days);
-    end
-    
+    %Preallocation
+    eval(['shared_data.M1_spindle_cycle_spike_counts', save_name_add, ' = cell(1,param.days);']);
+    eval(['shared_data.M1_spindle_cycle_prefered_phases', save_name_add, ' = cell(1,param.days);']);
+    eval(['shared_data.M1_spindle_cycle_phase_locking_values', save_name_add, ' = cell(1,param.days);']);
+    eval(['shared_data.Cb_spindle_cycle_spike_counts', save_name_add, ' = cell(1,param.days);']);
+    eval(['shared_data.Cb_spindle_cycle_prefered_phases', save_name_add, ' = cell(1,param.days);']);
+    eval(['shared_data.Cb_spindle_cycle_phase_locking_values', save_name_add, ' = cell(1,param.days);']);
     
     M1_day_spindle_count = zeros(1,param.days);
     Cb_day_spindle_count = zeros(1,param.days);
-    
-    control_offsets = [-5, -10];
     
     control_M1_spindle_cycle_spike_counts = cell(1,param.days);
     control_M1_spindle_cycle_prefered_phases = cell(1,param.days);
@@ -2120,8 +2180,14 @@ if enabled(23)
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Sleep_data.mat'])
-            M1_day_spindle_count(day) = M1_day_spindle_count(day) + length(M1_data.spindles{1}.pks);
-            Cb_day_spindle_count(day) = Cb_day_spindle_count(day) + length(Cb_data.spindles{1}.pks);
+            %Count spindles
+            if nested_only_bool
+                M1_day_spindle_count(day) = M1_day_spindle_count(day) + sum(find_nested(M1_data.so_delta.so_up_states, M1_data.spindles{1}.pks, nesting_threshold))
+                Cb_day_spindle_count(day) = Cb_day_spindle_count(day) + sum(find_nested(Cb_data.so_delta.so_up_states, Cb_data.spindles{1}.pks, nesting_threshold))
+            else
+                M1_day_spindle_count(day) = M1_day_spindle_count(day) + length(M1_data.spindles{1}.pks);
+                Cb_day_spindle_count(day) = Cb_day_spindle_count(day) + length(Cb_data.spindles{1}.pks);
+            end
         end
     end
     
@@ -2131,27 +2197,21 @@ if enabled(23)
             Cb_neuron_idx = 0;
             M1_day_neurons = sum(param.M1_task_related_neurons{day}(:));
             Cb_day_neurons = sum(param.Cb_task_related_neurons{day}(:));
-            if cross_area_bool
-                shared_data.M1_spindle_cycle_spike_counts_cross{day} = nan(pre_cycles + post_cycles,M1_day_neurons);
-                shared_data.M1_spindle_cycle_prefered_phases_cross{day} = nan(pre_cycles + post_cycles,M1_day_neurons);
-                shared_data.M1_spindle_cycle_phase_locking_values_cross{day} = nan(pre_cycles + post_cycles,M1_day_neurons);
-                shared_data.Cb_spindle_cycle_spike_counts_cross{day} = nan(pre_cycles + post_cycles,Cb_day_neurons);
-                shared_data.Cb_spindle_cycle_prefered_phases_cross{day} = nan(pre_cycles + post_cycles,Cb_day_neurons);
-                shared_data.Cb_spindle_cycle_phase_locking_values_cross{day} = nan(pre_cycles + post_cycles,Cb_day_neurons);
-            else
-                shared_data.M1_spindle_cycle_spike_counts{day} = nan(pre_cycles + post_cycles,M1_day_neurons);
-                shared_data.M1_spindle_cycle_prefered_phases{day} = nan(pre_cycles + post_cycles,M1_day_neurons);
-                shared_data.M1_spindle_cycle_phase_locking_values{day} = nan(pre_cycles + post_cycles,M1_day_neurons);
-                shared_data.Cb_spindle_cycle_spike_counts{day} = nan(pre_cycles + post_cycles,Cb_day_neurons);
-                shared_data.Cb_spindle_cycle_prefered_phases{day} = nan(pre_cycles + post_cycles,Cb_day_neurons);
-                shared_data.Cb_spindle_cycle_phase_locking_values{day} = nan(pre_cycles + post_cycles,Cb_day_neurons);
-            end
+            
+            %Preallocation
+            eval(['shared_data.M1_spindle_cycle_spike_counts', save_name_add, '{day} = nan(pre_cycles + post_cycles,M1_day_neurons);']);
+            eval(['shared_data.M1_spindle_cycle_prefered_phases', save_name_add, '{day} = nan(pre_cycles + post_cycles,M1_day_neurons);']);
+            eval(['shared_data.M1_spindle_cycle_phase_locking_values', save_name_add, '{day} = nan(pre_cycles + post_cycles,M1_day_neurons);']);
+            eval(['shared_data.Cb_spindle_cycle_spike_counts', save_name_add, '{day} = nan(pre_cycles + post_cycles,Cb_day_neurons);']);
+            eval(['shared_data.Cb_spindle_cycle_prefered_phases', save_name_add, '{day} = nan(pre_cycles + post_cycles,Cb_day_neurons);']);
+            eval(['shared_data.Cb_spindle_cycle_phase_locking_values', save_name_add, '{day} = nan(pre_cycles + post_cycles,Cb_day_neurons);']);
             
             M1_prePeak_spike_phases = cell(param.M1_chans,param.M1_neurons,pre_cycles);
             M1_postPeak_spike_phases = cell(param.M1_chans,param.M1_neurons,post_cycles);
             Cb_prePeak_spike_phases = cell(param.Cb_chans,param.Cb_neurons,pre_cycles);
             Cb_postPeak_spike_phases = cell(param.Cb_chans,param.Cb_neurons,post_cycles);
             
+            %Collect phase data
             for block = 1:param.sleep_blocks
                 if offset == 0
                     load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Spindle_spike_phasestamps', save_name_add, '.mat'])
@@ -2163,80 +2223,56 @@ if enabled(23)
                 Cb_prePeak_spike_phases = cellfun(@horzcat,Cb_prePeak_spike_phases,prePeak_cycle_phases_Cb_spindles_Cb_spikes,'UniformOutput',false);
                 Cb_postPeak_spike_phases = cellfun(@horzcat,Cb_postPeak_spike_phases,postPeak_cycle_phases_Cb_spindles_Cb_spikes,'UniformOutput',false);
             end
-            
+            %M1
             if M1_day_spindle_count(day) == 0
-                if cross_area_bool
-                    shared_data.M1_spindle_cycle_spike_counts_cross{day} = shared_data.M1_spindle_cycle_spike_counts_cross{day}(:,[]);
-                    shared_data.M1_spindle_cycle_prefered_phases_cross{day} = shared_data.M1_spindle_cycle_prefered_phases_cross{day}(:,[]);
-                    shared_data.M1_spindle_cycle_phase_locking_values_cross{day} = shared_data.M1_spindle_cycle_phase_locking_values_cross{day}(:,[]);
-                else
-                    shared_data.M1_spindle_cycle_spike_counts{day} = shared_data.M1_spindle_cycle_spike_counts{day}(:,[]);
-                    shared_data.M1_spindle_cycle_prefered_phases{day} = shared_data.M1_spindle_cycle_prefered_phases{day}(:,[]);
-                    shared_data.M1_spindle_cycle_phase_locking_values{day} = shared_data.M1_spindle_cycle_phase_locking_values{day}(:,[]);
-                end
+                %Collect data for multi_animal_analysis
+                eval(['shared_data.M1_spindle_cycle_spike_counts', save_name_add, '{day} = shared_data.M1_spindle_cycle_spike_counts', save_name_add, '{day}(:,[]);']);
+                eval(['shared_data.M1_spindle_cycle_prefered_phases', save_name_add, '{day} = shared_data.M1_spindle_cycle_prefered_phases', save_name_add, '{day}(:,[]);']);
+                eval(['shared_data.M1_spindle_cycle_phase_locking_values', save_name_add, '{day} = shared_data.M1_spindle_cycle_phase_locking_values', save_name_add, '{day}(:,[]);']);
             else
                 for chan = 1:param.M1_chans
                     for neuron = 1:param.M1_neurons
                         if param.M1_task_related_neurons{day}(chan,neuron)
                             M1_neuron_idx = M1_neuron_idx+1;
-                            
-                            if cross_area_bool
-                                shared_data.M1_spindle_cycle_spike_counts_cross{day}(:,M1_neuron_idx) = cat(3,cellfun(@length,M1_prePeak_spike_phases(chan,neuron,end:-1:1)), cellfun(@length,M1_postPeak_spike_phases(chan,neuron,:)));
-                                shared_data.M1_spindle_cycle_spike_counts_cross{day}(:,M1_neuron_idx) = shared_data.M1_spindle_cycle_spike_counts_cross{day}(:,M1_neuron_idx)/M1_day_spindle_count(day);
-                            else
-                                shared_data.M1_spindle_cycle_spike_counts{day}(:,M1_neuron_idx) = cat(3,cellfun(@length,M1_prePeak_spike_phases(chan,neuron,end:-1:1)), cellfun(@length,M1_postPeak_spike_phases(chan,neuron,:)));
-                                shared_data.M1_spindle_cycle_spike_counts{day}(:,M1_neuron_idx) = shared_data.M1_spindle_cycle_spike_counts{day}(:,M1_neuron_idx)/M1_day_spindle_count(day);
-                            end
-                            
+                            %Collect data for multi_animal_analysis
+                            eval(['shared_data.M1_spindle_cycle_spike_counts', save_name_add, '{day}(:,M1_neuron_idx) = cat(3,cellfun(@length,M1_prePeak_spike_phases(chan,neuron,end:-1:1)), cellfun(@length,M1_postPeak_spike_phases(chan,neuron,:)));']);
+                            eval(['shared_data.M1_spindle_cycle_spike_counts', save_name_add, '{day}(:,M1_neuron_idx) = shared_data.M1_spindle_cycle_spike_counts', save_name_add, '{day}(:,M1_neuron_idx)/M1_day_spindle_count(day);']);
+                            %Pre-peak cycles
                             pre_sum_polar = nan(pre_cycles, 2);
                             for cycle = 1:pre_cycles
                                 %Sum unit vectors to find prefered phase and phase locking for the cycles
                                 [vect_x, vect_y] = pol2cart(M1_prePeak_spike_phases{chan,neuron,cycle},1);
                                 [pre_sum_polar(cycle,1), pre_sum_polar(cycle,2)] = cart2pol(mean(vect_x),mean(vect_y));
                             end
-                            
+                            %Post-peak cycles
                             post_sum_polar = nan(post_cycles, 2);
                             for cycle = 1:post_cycles
                                 %Sum unit vectors to find prefered phase and phase locking for the cycles
                                 [vect_x, vect_y] = pol2cart(M1_postPeak_spike_phases{chan,neuron,cycle},1);
                                 [post_sum_polar(cycle,1), post_sum_polar(cycle,2)] = cart2pol(mean(vect_x),mean(vect_y));
                             end
-                            
-                            if cross_area_bool
-                                shared_data.M1_spindle_cycle_prefered_phases_cross{day}(:,M1_neuron_idx) = [pre_sum_polar(end:-1:1,1); post_sum_polar(:,1)];
-                                shared_data.M1_spindle_cycle_phase_locking_values_cross{day}(:,M1_neuron_idx) = [pre_sum_polar(end:-1:1,2); post_sum_polar(:,2)];
-                            else
-                                shared_data.M1_spindle_cycle_prefered_phases{day}(:,M1_neuron_idx) = [pre_sum_polar(end:-1:1,1); post_sum_polar(:,1)];
-                                shared_data.M1_spindle_cycle_phase_locking_values{day}(:,M1_neuron_idx) = [pre_sum_polar(end:-1:1,2); post_sum_polar(:,2)];
-                            end
+                            %Collect data for multi_animal_analysis
+                            eval(['shared_data.M1_spindle_cycle_prefered_phases', save_name_add, '{day}(:,M1_neuron_idx) = [pre_sum_polar(end:-1:1,1); post_sum_polar(:,1)];']);
+                            eval(['shared_data.M1_spindle_cycle_phase_locking_values', save_name_add, '{day}(:,M1_neuron_idx) = [pre_sum_polar(end:-1:1,2); post_sum_polar(:,2)];']);
                         end
                     end
                 end
             end
-            
+            %Cb
             if Cb_day_spindle_count(day) == 0
-                if cross_area_bool
-                    shared_data.Cb_spindle_cycle_spike_counts_cross{day} = shared_data.Cb_spindle_cycle_spike_counts_cross{day}(:,[]);
-                    shared_data.Cb_spindle_cycle_prefered_phases_cross{day} = shared_data.Cb_spindle_cycle_prefered_phases_cross{day}(:,[]);
-                    shared_data.Cb_spindle_cycle_phase_locking_values_cross{day} = shared_data.Cb_spindle_cycle_phase_locking_values_cross{day}(:,[]);
-                else
-                    shared_data.Cb_spindle_cycle_spike_counts{day} = shared_data.Cb_spindle_cycle_spike_counts{day}(:,[]);
-                    shared_data.Cb_spindle_cycle_prefered_phases{day} = shared_data.Cb_spindle_cycle_prefered_phases{day}(:,[]);
-                    shared_data.Cb_spindle_cycle_phase_locking_values{day} = shared_data.Cb_spindle_cycle_phase_locking_values{day}(:,[]);
-                end
+                %Collect data for multi_animal_analysis
+                eval(['shared_data.Cb_spindle_cycle_spike_counts', save_name_add, '{day} = shared_data.Cb_spindle_cycle_spike_counts', save_name_add, '{day}(:,[]);']);
+                eval(['shared_data.Cb_spindle_cycle_prefered_phases', save_name_add, '{day} = shared_data.Cb_spindle_cycle_prefered_phases', save_name_add, '{day}(:,[]);']);
+                eval(['shared_data.Cb_spindle_cycle_phase_locking_values', save_name_add, '{day} = shared_data.Cb_spindle_cycle_phase_locking_values', save_name_add, '{day}(:,[]);']);
             else
                 for chan = 1:param.Cb_chans
                     for neuron = 1:param.Cb_neurons
                         if param.Cb_task_related_neurons{day}(chan,neuron)
                             Cb_neuron_idx = Cb_neuron_idx+1;
+                            %Collect data for multi_animal_analysis
+                            eval(['shared_data.Cb_spindle_cycle_spike_counts', save_name_add, '{day}(:,Cb_neuron_idx) = cat(3,cellfun(@length,Cb_prePeak_spike_phases(chan,neuron,end:-1:1)), cellfun(@length,Cb_postPeak_spike_phases(chan,neuron,:)));']);
+                            eval(['shared_data.Cb_spindle_cycle_spike_counts', save_name_add, '{day}(:,Cb_neuron_idx) = shared_data.Cb_spindle_cycle_spike_counts', save_name_add, 'day}(:,Cb_neuron_idx)/Cb_day_spindle_count(day);']);
                             
-                            if cross_area_bool
-                                shared_data.Cb_spindle_cycle_spike_counts_cross{day}(:,Cb_neuron_idx) = cat(3,cellfun(@length,Cb_prePeak_spike_phases(chan,neuron,end:-1:1)), cellfun(@length,Cb_postPeak_spike_phases(chan,neuron,:)));
-                                shared_data.Cb_spindle_cycle_spike_counts_cross{day}(:,Cb_neuron_idx) = shared_data.Cb_spindle_cycle_spike_counts_cross{day}(:,Cb_neuron_idx)/Cb_day_spindle_count(day);
-                            else
-                                shared_data.Cb_spindle_cycle_spike_counts{day}(:,Cb_neuron_idx) = cat(3,cellfun(@length,Cb_prePeak_spike_phases(chan,neuron,end:-1:1)), cellfun(@length,Cb_postPeak_spike_phases(chan,neuron,:)));
-                                shared_data.Cb_spindle_cycle_spike_counts{day}(:,Cb_neuron_idx) = shared_data.Cb_spindle_cycle_spike_counts{day}(:,Cb_neuron_idx)/Cb_day_spindle_count(day);
-                            end
                             
                             pre_sum_polar = nan(pre_cycles, 2);
                             for cycle = 1:pre_cycles
@@ -2251,74 +2287,43 @@ if enabled(23)
                                 [vect_x, vect_y] = pol2cart(Cb_postPeak_spike_phases{chan,neuron,cycle},1);
                                 [post_sum_polar(cycle,1), post_sum_polar(cycle,2)] = cart2pol(mean(vect_x),mean(vect_y));
                             end
-                            
-                            if cross_area_bool
-                                shared_data.Cb_spindle_cycle_prefered_phases_cross{day}(:,Cb_neuron_idx) = [pre_sum_polar(end:-1:1,1); post_sum_polar(:,1)];
-                                shared_data.Cb_spindle_cycle_phase_locking_values_cross{day}(:,Cb_neuron_idx) = [pre_sum_polar(end:-1:1,2); post_sum_polar(:,2)];
-                            else
-                                shared_data.Cb_spindle_cycle_prefered_phases{day}(:,Cb_neuron_idx) = [pre_sum_polar(end:-1:1,1); post_sum_polar(:,1)];
-                                shared_data.Cb_spindle_cycle_phase_locking_values{day}(:,Cb_neuron_idx) = [pre_sum_polar(end:-1:1,2); post_sum_polar(:,2)];
-                            end
+                            %Collect data for multi_animal_analysis
+                            eval(['shared_data.Cb_spindle_cycle_prefered_phases', save_name_add, '{day}(:,Cb_neuron_idx) = [pre_sum_polar(end:-1:1,1); post_sum_polar(:,1)];']);
+                            eval(['shared_data.Cb_spindle_cycle_phase_locking_values', save_name_add, '{day}(:,Cb_neuron_idx) = [pre_sum_polar(end:-1:1,2); post_sum_polar(:,2)];']);
                         end
                     end
                 end
             end
         end
-        %To make a graph for each day count the task-related neurons for each day and use that to divide up the neurons
+        %To make a graph for each day, count the task-related neurons for each day and use that to divide up the neurons
         if offset == 0
             save([rootpath,animal,'/Shared_Data.mat'], 'shared_data');
         else
-            if cross_area_bool
-                control_M1_spindle_cycle_spike_counts = cellfun(@horzcat,control_M1_spindle_cycle_spike_counts,shared_data.M1_spindle_cycle_spike_counts_cross,'UniformOutput',false);
-                control_M1_spindle_cycle_prefered_phases = cellfun(@horzcat,control_M1_spindle_cycle_prefered_phases,shared_data.M1_spindle_cycle_prefered_phases_cross,'UniformOutput',false);
-                control_M1_spindle_cycle_phase_locking_values = cellfun(@horzcat,control_M1_spindle_cycle_phase_locking_values,shared_data.M1_spindle_cycle_phase_locking_values_cross,'UniformOutput',false);
-                control_Cb_spindle_cycle_spike_counts = cellfun(@horzcat,control_Cb_spindle_cycle_spike_counts,shared_data.Cb_spindle_cycle_spike_counts_cross,'UniformOutput',false);
-                control_Cb_spindle_cycle_prefered_phases = cellfun(@horzcat,control_Cb_spindle_cycle_prefered_phases,shared_data.Cb_spindle_cycle_prefered_phases_cross,'UniformOutput',false);
-                control_Cb_spindle_cycle_phase_locking_values = cellfun(@horzcat,control_Cb_spindle_cycle_phase_locking_values,shared_data.Cb_spindle_cycle_phase_locking_values_cross,'UniformOutput',false);
-                
-            else
-                control_M1_spindle_cycle_spike_counts = cellfun(@horzcat,control_M1_spindle_cycle_spike_counts,shared_data.M1_spindle_cycle_spike_counts,'UniformOutput',false);
-                control_M1_spindle_cycle_prefered_phases = cellfun(@horzcat,control_M1_spindle_cycle_prefered_phases,shared_data.M1_spindle_cycle_prefered_phases,'UniformOutput',false);
-                control_M1_spindle_cycle_phase_locking_values = cellfun(@horzcat,control_M1_spindle_cycle_phase_locking_values,shared_data.M1_spindle_cycle_phase_locking_values,'UniformOutput',false);
-                control_Cb_spindle_cycle_spike_counts = cellfun(@horzcat,control_Cb_spindle_cycle_spike_counts,shared_data.Cb_spindle_cycle_spike_counts,'UniformOutput',false);
-                control_Cb_spindle_cycle_prefered_phases = cellfun(@horzcat,control_Cb_spindle_cycle_prefered_phases,shared_data.Cb_spindle_cycle_prefered_phases,'UniformOutput',false);
-                control_Cb_spindle_cycle_phase_locking_values = cellfun(@horzcat,control_Cb_spindle_cycle_phase_locking_values,shared_data.Cb_spindle_cycle_phase_locking_values,'UniformOutput',false);
-            end
+                eval(['control_M1_spindle_cycle_spike_counts = cellfun(@horzcat,control_M1_spindle_cycle_spike_counts,shared_data.M1_spindle_cycle_spike_counts', save_name_add, ',''UniformOutput'',false);']);
+                eval(['control_M1_spindle_cycle_prefered_phases = cellfun(@horzcat,control_M1_spindle_cycle_prefered_phases,shared_data.M1_spindle_cycle_prefered_phases', save_name_add, ',''UniformOutput'',false);']);
+                eval(['control_M1_spindle_cycle_phase_locking_values = cellfun(@horzcat,control_M1_spindle_cycle_phase_locking_values,shared_data.M1_spindle_cycle_phase_locking_values', save_name_add, ',''UniformOutput'',false);']);
+                eval(['control_Cb_spindle_cycle_spike_counts = cellfun(@horzcat,control_Cb_spindle_cycle_spike_counts,shared_data.Cb_spindle_cycle_spike_counts', save_name_add, ',''UniformOutput'',false);']);
+                eval(['control_Cb_spindle_cycle_prefered_phases = cellfun(@horzcat,control_Cb_spindle_cycle_prefered_phases,shared_data.Cb_spindle_cycle_prefered_phases', save_name_add, ',''UniformOutput'',false);']);
+                eval(['control_Cb_spindle_cycle_phase_locking_values = cellfun(@horzcat,control_Cb_spindle_cycle_phase_locking_values,shared_data.Cb_spindle_cycle_phase_locking_values', save_name_add, ',''UniformOutput'',false);']);
         end
     end
     x_idx = 1:(pre_cycles+post_cycles);
+    %Collect data for plotting
     load([rootpath,animal,'/Shared_Data.mat']) %Yes, I know this is a wierd, awkward way of doing this. Blame poor early design choices and an unwillingness to go back and redo everything.
     
-    if cross_area_bool
-        M1_spindle_cycle_spike_counts = cat(2,shared_data.M1_spindle_cycle_spike_counts_cross{:});
-        M1_spindle_cycle_prefered_phases = cat(2,shared_data.M1_spindle_cycle_prefered_phases_cross{:});
-        M1_spindle_cycle_phase_locking_values = cat(2,shared_data.M1_spindle_cycle_phase_locking_values_cross{:});
-        Cb_spindle_cycle_spike_counts = cat(2,shared_data.Cb_spindle_cycle_spike_counts_cross{:});
-        Cb_spindle_cycle_prefered_phases = cat(2,shared_data.Cb_spindle_cycle_prefered_phases_cross{:});
-        Cb_spindle_cycle_phase_locking_values = cat(2,shared_data.Cb_spindle_cycle_phase_locking_values_cross{:});
-        
-        shared_data.c_M1_spindle_cycle_spike_counts_cross = control_M1_spindle_cycle_spike_counts;
-        shared_data.c_M1_spindle_cycle_prefered_phases_cross = control_M1_spindle_cycle_prefered_phases;
-        shared_data.c_M1_spindle_cycle_phase_locking_values_cross = control_M1_spindle_cycle_phase_locking_values;
-        shared_data.c_Cb_spindle_cycle_spike_counts_cross = control_Cb_spindle_cycle_spike_counts;
-        shared_data.c_Cb_spindle_cycle_prefered_phases_cross = control_Cb_spindle_cycle_prefered_phases;
-        shared_data.c_Cb_spindle_cycle_phase_locking_values_cross = control_Cb_spindle_cycle_phase_locking_values;
-    else
-        M1_spindle_cycle_spike_counts = cat(2,shared_data.M1_spindle_cycle_spike_counts{:});
-        M1_spindle_cycle_prefered_phases = cat(2,shared_data.M1_spindle_cycle_prefered_phases{:});
-        M1_spindle_cycle_phase_locking_values = cat(2,shared_data.M1_spindle_cycle_phase_locking_values{:});
-        Cb_spindle_cycle_spike_counts = cat(2,shared_data.Cb_spindle_cycle_spike_counts{:});
-        Cb_spindle_cycle_prefered_phases = cat(2,shared_data.Cb_spindle_cycle_prefered_phases{:});
-        Cb_spindle_cycle_phase_locking_values = cat(2,shared_data.Cb_spindle_cycle_phase_locking_values{:});
-        
-        shared_data.c_M1_spindle_cycle_spike_counts = control_M1_spindle_cycle_spike_counts;
-        shared_data.c_M1_spindle_cycle_prefered_phases = control_M1_spindle_cycle_prefered_phases;
-        shared_data.c_M1_spindle_cycle_phase_locking_values = control_M1_spindle_cycle_phase_locking_values;
-        shared_data.c_Cb_spindle_cycle_spike_counts = control_Cb_spindle_cycle_spike_counts;
-        shared_data.c_Cb_spindle_cycle_prefered_phases = control_Cb_spindle_cycle_prefered_phases;
-        shared_data.c_Cb_spindle_cycle_phase_locking_values = control_Cb_spindle_cycle_phase_locking_values;
-    end
+    eval(['M1_spindle_cycle_spike_counts = cat(2,shared_data.M1_spindle_cycle_spike_counts', save_name_add, '{:});']);
+    eval(['M1_spindle_cycle_prefered_phases = cat(2,shared_data.M1_spindle_cycle_prefered_phases', save_name_add, '{:});']);
+    eval(['M1_spindle_cycle_phase_locking_values = cat(2,shared_data.M1_spindle_cycle_phase_locking_values', save_name_add, '{:});']);
+    eval(['Cb_spindle_cycle_spike_counts = cat(2,shared_data.Cb_spindle_cycle_spike_counts', save_name_add, '{:});']);
+    eval(['Cb_spindle_cycle_prefered_phases = cat(2,shared_data.Cb_spindle_cycle_prefered_phases', save_name_add, '{:});']);
+    eval(['Cb_spindle_cycle_phase_locking_values = cat(2,shared_data.Cb_spindle_cycle_phase_locking_values', save_name_add, '{:});']);
     
+    eval(['shared_data.c_M1_spindle_cycle_spike_counts', save_name_add, ' = control_M1_spindle_cycle_spike_counts;']);
+    eval(['shared_data.c_M1_spindle_cycle_prefered_phases', save_name_add, ' = control_M1_spindle_cycle_prefered_phases;']);
+    eval(['shared_data.c_M1_spindle_cycle_phase_locking_values', save_name_add, ' = control_M1_spindle_cycle_phase_locking_values;']);
+    eval(['shared_data.c_Cb_spindle_cycle_spike_counts', save_name_add, ' = control_Cb_spindle_cycle_spike_counts;']);
+    eval(['shared_data.c_Cb_spindle_cycle_prefered_phases', save_name_add, ' = control_Cb_spindle_cycle_prefered_phases;']);
+    eval(['shared_data.c_Cb_spindle_cycle_phase_locking_values', save_name_add, ' = control_Cb_spindle_cycle_phase_locking_values;']);
     
     save([rootpath,animal,'/Shared_Data.mat'], 'shared_data');
     
@@ -2430,11 +2435,13 @@ end
 
 if enabled(24)
     disp('Block 24...')
+    %Parameters
     day = 1;
     block = 1;
+    %Add the for below, the commented out end command, and replace the start and end time parameters with the i versions to explore time windows
+    %for i = 1:1000
     delta_so_band = [.1,4];
     spindle_band = [10,15];
-    %for i = 1:1000
     start_time = 454; %in seconds %454 %1518 %1581 %(i*10)+1;
     end_time = 465;   %in seconds %465 %1540 %1636 %start_time+10;
     
@@ -2494,6 +2501,7 @@ if enabled(24)
     flfp = filtfilt(blow,alow,flfp);
     Cb_spind_filt_norm = zscore(flfp);
     
+    %Collect oscillations in time window
     M1_delta = M1_data.so_delta.delta_up_states((M1_data.so_delta.delta_up_states > start_time) & (M1_data.so_delta.delta_up_states < end_time));
     M1_so = M1_data.so_delta.so_up_states((M1_data.so_delta.so_up_states > start_time) & (M1_data.so_delta.so_up_states < end_time));
     M1_spin = M1_data.spindles{1}.pks((M1_data.spindles{1}.pks > start_time) & (M1_data.spindles{1}.pks < end_time));
@@ -2502,10 +2510,13 @@ if enabled(24)
     Cb_so = Cb_data.so_delta.so_up_states((Cb_data.so_delta.so_up_states > start_time) & (Cb_data.so_delta.so_up_states < end_time));
     Cb_spin = Cb_data.spindles{1}.pks((Cb_data.spindles{1}.pks > start_time) & (Cb_data.spindles{1}.pks < end_time));
 
+    %M1
+    %Plot LFPs filtered in oscillation bands
     plot(M1_x_vals,M1_LFP_norm(M1_idxs) + 10,'-k')
     hold on
     plot(M1_x_vals,M1_so_filt_norm(M1_idxs),'-k')
     plot(M1_x_vals,M1_spind_filt_norm(M1_idxs) - 10,'-k')
+    %Mark oscillation times
     for timestamp = M1_delta'
         if ~isempty(timestamp)
             plot([timestamp timestamp],[-15 15],'LineWidth',2,'Color',[1 0.5 0.5])
@@ -2538,13 +2549,16 @@ if enabled(24)
     end
     axis([start_time-1, end_time+1, -20, 20])
     saveas(gcf,[rootpath,animal,'/LFP_rhythms_M1.fig'])
-    %close all
+    close all
     
+    %Cb
+    %Plot LFPs filtered in oscillation bands
     figure
     plot(Cb_x_vals,Cb_LFP_norm(M1_idxs) + 10,'-k')
     hold on
     plot(Cb_x_vals,Cb_so_filt_norm(M1_idxs),'-k')
     plot(Cb_x_vals,Cb_spind_filt_norm(M1_idxs) - 10,'-k')
+    %Mark oscillation times
     for timestamp = M1_delta'
         if ~isempty(timestamp)
             plot([timestamp timestamp],[-15 15],'LineWidth',2,'Color',[1 0.5 0.5])
@@ -2588,6 +2602,7 @@ if enabled(25)
     disp('Block 25...')
     addpath(genpath('Z:/Matlab for analysis/chronux_2_10/chronux/spectral_analysis'))
     
+    %Parameters
     do_full_coh_hist = false;
     
     coh_params.Fs = param.M1_Fs;
@@ -2620,6 +2635,7 @@ if enabled(25)
             
             for M1_chan = 1:size(M1_LFP,1)
                 for Cb_chan = 1:size(Cb_LFP,1)
+                    %Calculate coherences
                     if param.M1_sleep_good_chans(M1_chan) == M1_example_chan && param.Cb_sleep_good_chans(Cb_chan) == Cb_example_chan
                         [coh,phi_cmr,~,~,~,coh_times,coh_freqs,~,~,~] = cohgramc(squeeze(M1_LFP(M1_chan,:))', squeeze(Cb_LFP(Cb_chan,:))', [1 .025], coh_params);
                         coh_score = mean(coh,1);
@@ -2698,6 +2714,7 @@ if false
         addpath(genpath('Z:/Matlab for analysis/chronux_2_10/chronux/spectral_analysis'))
     end
     
+    %Parameters
     worker_num = 24;
     do_full_coh_hist = true;
     
@@ -2731,11 +2748,11 @@ if false
             Cb_LFP = Cb_LFP - Cb_med;
             
             [~,~,~,~,~,coh_times,coh_freqs,~,~,~] = cohgramc(squeeze(M1_LFP(1,:))', squeeze(Cb_LFP(1,:))', [1 .025], coh_params);
-
             
             for M1_chan = 1:size(M1_LFP,1)
                 parfor Cb_chan = 1:size(Cb_LFP,1)
                     if do_full_coh_hist
+                        %Calculate coherence 
                         [coh,phi_cmr,~,~,~,~,~,~,~,~] = cohgramc(squeeze(M1_LFP(M1_chan,:))', squeeze(Cb_LFP(Cb_chan,:))', [1 .025], coh_params);
                         coh_score = mean(coh,1);
                         all_pair_cohs(day,block,M1_chan,Cb_chan,:) = coh_score;
@@ -2863,10 +2880,12 @@ if enabled(26)
             spindle_Cb_hist = Cb_hist;
             save([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/spindle_data.mat'], 'spindle_cross_corrs', 'spindle_M1_hist', 'spindle_Cb_hist', '-v7.3')
             
+            %Calculate means
             mean_delta_corr = squeeze(mean(mean(mean(delta_cross_corrs,1),2),3));
             mean_so_corr = squeeze(mean(mean(mean(so_cross_corrs,1),2),3));
             mean_spindle_corr = squeeze(mean(mean(mean(spindle_cross_corrs,1),2),3));
             
+            %Plot oscillation correlations
             ss_fit = fit((1:length(mean_delta_corr))', mean_delta_corr, 'smoothingspline', 'SmoothingParam', param.smoothing_param);
             smooth_delta_corr = ss_fit(1:length(mean_delta_corr));
             line(1:length(mean_delta_corr), mean_delta_corr, 'Color', [.7 .7 .7])
@@ -2908,6 +2927,7 @@ if enabled(27)
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_data.mat'])
             load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Spike_timestamps.mat']);
             
+            %Get and shuffle oscillation indexs
             delta_idxs = round(M1_data.Fs_LFP * M1_data.so_delta.delta_up_states);
             so_idxs = round(M1_data.Fs_LFP * M1_data.so_delta.so_up_states);
             spindle_idxs = round(M1_data.Fs_LFP * M1_data.spindles{1}.pks);
@@ -2917,6 +2937,7 @@ if enabled(27)
             shuff_spindle_mean = nan(shuffle_reps, ((pre_margin + post_margin)*2000)-1);
             for rep = 1:shuffle_reps
                 
+                %Preallocation
                 shuff_delta_cross_corrs = nan(sum(param.M1_task_related_neurons{day}(:)), sum(param.Cb_task_related_neurons{day}(:)), length(M1_data.so_delta.delta_up_states), ((pre_margin + post_margin)*2000)-1);
                 shuff_so_cross_corrs = nan(sum(param.M1_task_related_neurons{day}(:)), sum(param.Cb_task_related_neurons{day}(:)), length(M1_data.so_delta.so_up_states), ((pre_margin + post_margin)*2000)-1);
                 shuff_spindle_cross_corrs = nan(sum(param.M1_task_related_neurons{day}(:)), sum(param.Cb_task_related_neurons{day}(:)), length(M1_data.spindles{1}.pks), ((pre_margin + post_margin)*2000)-1);
@@ -3049,13 +3070,13 @@ if enabled(27)
                     end
                 end
                 
-                
+                %Calculate means from shuffled data
                 shuff_delta_mean(rep,:) = mean(mean(mean(shuff_delta_cross_corrs,1),2),3);
                 shuff_so_mean(rep,:) = mean(mean(mean(shuff_so_cross_corrs,1),2),3);
                 shuff_spindle_mean(rep,:) = mean(mean(mean(shuff_spindle_cross_corrs,1),2),3);
             end
             
-            
+            %Calculate means
             mean_delta_corr = squeeze(mean(mean(mean(delta_cross_corrs,1),2),3));
             mean_so_corr = squeeze(mean(mean(mean(so_cross_corrs,1),2),3));
             mean_spindle_corr = squeeze(mean(mean(mean(spindle_cross_corrs,1),2),3));
@@ -3068,6 +3089,7 @@ if enabled(27)
             mean_so_corr = mean_so_corr - mean_shuff_so_corr;
             mean_spindle_corr = mean_spindle_corr - mean_shuff_spindle_corr;
             
+            %Plot
             ss_fit = fit((1:length(mean_delta_corr))', mean_delta_corr, 'smoothingspline', 'SmoothingParam', param.smoothing_param);
             smooth_delta_corr = ss_fit(1:length(mean_delta_corr));
             line(1:length(mean_delta_corr), mean_delta_corr, 'Color', [.7 .7 .7])
@@ -3096,11 +3118,12 @@ end
 
 %% Normalized Spike-spike cross area cofiring in M1 spindle cycles using shuffling (28)
 
-
 if enabled(28)
     disp('Block 28...')
     addpath(genpath('Z:\Matlab for analysis\eeglab\functions'))
     rmpath(genpath('Z:\Matlab for analysis\eeglab\functions\octavefunc\signal'))
+    
+    %Parameters
     pre_margin = 0.05; %in seconds
     post_margin = 0.05; %in seconds
     pre_cycles = 5;
@@ -3109,6 +3132,7 @@ if enabled(28)
     max_idx_err = 10;
     kernel_stdv = 5;
     control_offsets = [-5, -10];
+    
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Filtered_Sleep_data.mat'])
@@ -3145,14 +3169,14 @@ if enabled(28)
                                         
                                         cycle_start_idx = peak_idxs(spindle_idxs(spindle)+(cycle-1));
                                         cycle_end_idx = peak_idxs(spindle_idxs(spindle)+(cycle));
-                                        
+                                        %Collect cross area lags
                                         M1_cycle_spikes = M1_spike_timestamps{M1_neuron}(M1_spike_timestamps{M1_neuron} > (cycle_start_idx/param.M1_Fs)  &  M1_spike_timestamps{M1_neuron} < (cycle_end_idx/param.M1_Fs));
                                         for M1_spiketime = M1_cycle_spikes
                                             Cb_spikes = Cb_spike_timestamps{Cb_neuron}(Cb_spike_timestamps{Cb_neuron} >= (M1_spiketime - pre_margin) & Cb_spike_timestamps{Cb_neuron} <= (M1_spiketime + post_margin));
                                             Cb_spikes = Cb_spikes - M1_spiketime; %It should be Cb - M1 for both
                                             lag_hists = cat(1,lag_hists,histcounts(Cb_spikes,(-(round(pre_margin*1000)+0.5)):(round(post_margin*1000)+0.5)));
                                         end
-                                        
+                                        %Collect cross area lags
                                         Cb_cycle_spikes = Cb_spike_timestamps{Cb_neuron}(Cb_spike_timestamps{Cb_neuron} > (cycle_start_idx/param.Cb_Fs)  &  Cb_spike_timestamps{Cb_neuron} < (cycle_end_idx/param.Cb_Fs));
                                         for Cb_spiketime = Cb_cycle_spikes
                                             M1_spikes = M1_spike_timestamps{M1_neuron}(M1_spike_timestamps{M1_neuron} >= (Cb_spiketime - pre_margin) & M1_spike_timestamps{M1_neuron} <= (Cb_spiketime + post_margin));
@@ -3195,8 +3219,7 @@ if enabled(28)
                                             
                                             cycle_start_idx = peak_idxs(spindle_idxs(spindle)+(cycle-1));
                                             cycle_end_idx = peak_idxs(spindle_idxs(spindle)+(cycle));
-                                            
-                                            
+                                            %Collect cross area lags
                                             M1_cycle_spikes = M1_spike_timestamps{M1_neuron}(M1_spike_timestamps{M1_neuron} > (cycle_start_idx/param.M1_Fs)  &  M1_spike_timestamps{M1_neuron} < (cycle_end_idx/param.M1_Fs));
                                             M1_cycle_spikes = M1_cycle_spikes + (peak_idxs(spindle_idxs(shuffled_spindle_idxs(shuffle,spindle)))/param.M1_Fs) - (peak_idxs(spindle_idxs(spindle))/param.M1_Fs);
                                             for M1_spiketime = M1_cycle_spikes
@@ -3204,7 +3227,7 @@ if enabled(28)
                                                 Cb_spikes = Cb_spikes - M1_spiketime; %It should be Cb - M1 for both
                                                 lag_hists = cat(1,lag_hists,histcounts(Cb_spikes,(-(round(pre_margin*1000)+0.5)):(round(post_margin*1000)+0.5)));
                                             end
-                                            
+                                            %Collect cross area lags
                                             Cb_cycle_spikes = Cb_spike_timestamps{Cb_neuron}(Cb_spike_timestamps{Cb_neuron} > (cycle_start_idx/param.Cb_Fs)  &  Cb_spike_timestamps{Cb_neuron} < (cycle_end_idx/param.Cb_Fs));
                                             Cb_cycle_spikes = Cb_cycle_spikes + (peak_idxs(spindle_idxs(shuffled_spindle_idxs(shuffle,spindle)))/param.Cb_Fs) - (peak_idxs(spindle_idxs(spindle))/param.Cb_Fs);
                                             for Cb_spiketime = Cb_cycle_spikes
@@ -3229,7 +3252,7 @@ if enabled(28)
                     end
                 end
                 
-                
+                %Calculate corrected CCH
                 ave_shuffled_CCH = squeeze(mean(shuffled_CCH,3));
                 corrected_CCH = raw_CCH-ave_shuffled_CCH;
                 kernel = gausswin(size(corrected_CCH,3),size(corrected_CCH,3)/kernel_stdv);
@@ -3239,6 +3262,7 @@ if enabled(28)
                         smoothed_CCH(i,j,:) = conv(squeeze(corrected_CCH(i,j,:)),kernel,'same');
                     end
                 end
+                %Calculate means and standrad deviations
                 [peak_val,peak_idx] = max(smoothed_CCH,[],3);
                 peak_time = peak_idx - (round(pre_margin * 1000) + 1);
                 pair_peaks_mean = mean(peak_val,1);
@@ -3248,6 +3272,7 @@ if enabled(28)
                 pair_peaks_err = pair_peaks_stdv/sqrt(size(peak_time,1));
                 pair_times_err = pair_times_stdv/sqrt(size(peak_time,1));
                 
+                %Plot
                 x_axis = [1-pre_cycles:post_cycles];
                 hold on
                 errorbar(x_axis,pair_peaks_mean,pair_peaks_err,pair_peaks_err,zeros(1,pre_cycles+post_cycles),zeros(1,pre_cycles+post_cycles),'.')
@@ -3283,6 +3308,7 @@ end
 
 if enabled(29)
     disp('Block 29...')
+    %Parameters
     delta_so_band = [.1,4];
     spindle_band = [10,15];
     pre_margin = 0.5; %in seconds
@@ -3299,7 +3325,7 @@ if enabled(29)
     x_axis_LFP = x_axis_LFP*1000/param.M1_Fs;
     x_axis_spike = round(-pre_margin*1000):round(bin_width*1000):round(post_margin*1000);
     x_axis_spike = x_axis_spike(1:(end-1)) + round(bin_width*500);
-    
+    %Preallocation
     M1_delta_snapshots = nan(0, length(x_axis_LFP));
     M1_SO_snapshots = nan(0, length(x_axis_LFP));
     M1_spind_snapshots = nan(0, length(x_axis_LFP));
@@ -3367,6 +3393,7 @@ if enabled(29)
                 all_rhythms_Cb = all_rhythms_Cb(all_rhythms_Cb < ((length(Cb_LFP)/Cb_data.Fs_LFP)-post_margin));
                 M1_LFP = M1_so_filt_norm;
                 Cb_LFP = Cb_so_filt_norm;
+                %Preallocation
                 M1_rhythm_snapshots = nan(length(all_rhythms_M1), round(pre_margin*param.M1_Fs)+round(post_margin*param.M1_Fs)+1);
                 Cb_rhythm_snapshots = nan(length(all_rhythms_Cb), round(pre_margin*param.Cb_Fs)+round(post_margin*param.Cb_Fs)+1);
                 M1_spike_hist_sum = zeros(1, round((pre_margin + post_margin)/bin_width));
@@ -3375,6 +3402,7 @@ if enabled(29)
                     center = round(M1_data.Fs_LFP * all_rhythms_M1(rhythm));
                     M1_rhythm_snapshots(rhythm,:) = M1_LFP((center-round(pre_margin*param.M1_Fs)):(center+round(post_margin*param.M1_Fs)));
                     for spike_times_cell = M1_spike_timestamps(M1_neurons)'
+                        %Create spike histograms
                         all_spike_times = spike_times_cell{1};
                         spike_times = all_spike_times(all_spike_times >= ((center/param.M1_Fs) - pre_margin) & all_spike_times <= ((center/param.M1_Fs) + post_margin));
                         spike_times = spike_times - (center/param.M1_Fs);
@@ -3387,7 +3415,8 @@ if enabled(29)
                 for rhythm = 1:length(all_rhythms_Cb)
                     center = round(Cb_data.Fs_LFP * all_rhythms_Cb(rhythm));
                     Cb_rhythm_snapshots(rhythm,:) = Cb_LFP((center-round(pre_margin*param.Cb_Fs)):(center+round(post_margin*param.Cb_Fs)));
-                    for spike_times_cell =  Cb_spike_timestamps(Cb_neurons)' %Does this work?
+                    for spike_times_cell =  Cb_spike_timestamps(Cb_neurons)'
+                        %Create spike histograms
                         all_spike_times = spike_times_cell{1};
                         spike_times = all_spike_times(all_spike_times >= ((center/param.Cb_Fs) - pre_margin) & all_spike_times <= ((center/param.Cb_Fs) + post_margin));
                         spike_times = spike_times - (center/param.Cb_Fs);
@@ -3440,6 +3469,7 @@ if enabled(29)
                 all_rhythms_Cb = all_rhythms_Cb(all_rhythms_Cb < ((length(Cb_LFP)/Cb_data.Fs_LFP)-post_margin));
                 M1_LFP = M1_so_filt_norm;
                 Cb_LFP = Cb_so_filt_norm;
+                %Preallocation
                 M1_rhythm_snapshots = nan(length(all_rhythms_M1), round(pre_margin*param.M1_Fs)+round(post_margin*param.M1_Fs)+1);
                 Cb_rhythm_snapshots = nan(length(all_rhythms_Cb), round(pre_margin*param.Cb_Fs)+round(post_margin*param.Cb_Fs)+1);
                 M1_spike_hist_sum = zeros(1, round((pre_margin + post_margin)/bin_width));
@@ -3448,6 +3478,7 @@ if enabled(29)
                     center = round(M1_data.Fs_LFP * all_rhythms_M1(rhythm));
                     M1_rhythm_snapshots(rhythm,:) = M1_LFP((center-round(pre_margin*param.M1_Fs)):(center+round(post_margin*param.M1_Fs)));
                     for spike_times_cell = M1_spike_timestamps(M1_neurons)'
+                        %Create spike histograms
                         all_spike_times = spike_times_cell{1};
                         spike_times = all_spike_times(all_spike_times >= ((center/param.M1_Fs) - pre_margin) & all_spike_times <= ((center/param.M1_Fs) + post_margin));
                         spike_times = spike_times - (center/param.M1_Fs);
@@ -3458,7 +3489,8 @@ if enabled(29)
                 for rhythm = 1:length(all_rhythms_Cb)
                     center = round(Cb_data.Fs_LFP * all_rhythms_Cb(rhythm));
                     Cb_rhythm_snapshots(rhythm,:) = Cb_LFP((center-round(pre_margin*param.Cb_Fs)):(center+round(post_margin*param.Cb_Fs)));
-                    for spike_times_cell =  Cb_spike_timestamps(Cb_neurons)' %Does this work?
+                    for spike_times_cell =  Cb_spike_timestamps(Cb_neurons)'
+                        %Create spike histograms
                         all_spike_times = spike_times_cell{1};
                         spike_times = all_spike_times(all_spike_times >= ((center/param.Cb_Fs) - pre_margin) & all_spike_times <= ((center/param.Cb_Fs) + post_margin));
                         spike_times = spike_times - (center/param.Cb_Fs);
@@ -3511,6 +3543,7 @@ if enabled(29)
                 all_rhythms_Cb = all_rhythms_Cb(all_rhythms_Cb < ((length(Cb_LFP)/Cb_data.Fs_LFP)-post_margin));
                 M1_LFP = M1_spind_filt_norm;
                 Cb_LFP = Cb_spind_filt_norm;
+                %Preallocation
                 M1_rhythm_snapshots = nan(length(all_rhythms_M1), round(pre_margin*param.M1_Fs)+round(post_margin*param.M1_Fs)+1);
                 Cb_rhythm_snapshots = nan(length(all_rhythms_Cb), round(pre_margin*param.Cb_Fs)+round(post_margin*param.Cb_Fs)+1);
                 M1_spike_hist_sum = zeros(1, round((pre_margin + post_margin)/bin_width));
@@ -3519,6 +3552,7 @@ if enabled(29)
                     center = round(M1_data.Fs_LFP * all_rhythms_M1(rhythm));
                     M1_rhythm_snapshots(rhythm,:) = M1_LFP((center-round(pre_margin*param.M1_Fs)):(center+round(post_margin*param.M1_Fs)));
                     for spike_times_cell = M1_spike_timestamps(M1_neurons)'
+                        %Create spike histograms
                         all_spike_times = spike_times_cell{1};
                         spike_times = all_spike_times(all_spike_times >= ((center/param.M1_Fs) - pre_margin) & all_spike_times <= ((center/param.M1_Fs) + post_margin));
                         spike_times = spike_times - (center/param.M1_Fs);
@@ -3529,7 +3563,8 @@ if enabled(29)
                 for rhythm = 1:length(all_rhythms_Cb)
                     center = round(Cb_data.Fs_LFP * all_rhythms_Cb(rhythm));
                     Cb_rhythm_snapshots(rhythm,:) = Cb_LFP((center-round(pre_margin*param.Cb_Fs)):(center+round(post_margin*param.Cb_Fs)));
-                    for spike_times_cell =  Cb_spike_timestamps(Cb_neurons)' %Does this work?
+                    for spike_times_cell =  Cb_spike_timestamps(Cb_neurons)'
+                        %Create spike histograms
                         all_spike_times = spike_times_cell{1};
                         spike_times = all_spike_times(all_spike_times >= ((center/param.Cb_Fs) - pre_margin) & all_spike_times <= ((center/param.Cb_Fs) + post_margin));
                         spike_times = spike_times - (center/param.Cb_Fs);
@@ -3575,6 +3610,7 @@ if enabled(29)
             end
         end
         
+        %Plot delta
         rand_idxs = randperm(size(M1_delta_snapshots,1));
         if size(M1_delta_snapshots,1) > max_to_plot
             rand_idxs = rand_idxs(1:max_to_plot);
@@ -3595,6 +3631,7 @@ if enabled(29)
         end
         close all
         
+        %Plot SO
         rand_idxs = randperm(size(M1_SO_snapshots,1));
         if size(M1_SO_snapshots,1) > max_to_plot
             rand_idxs = rand_idxs(1:max_to_plot);
@@ -3615,6 +3652,7 @@ if enabled(29)
         end
         close all
         
+        %Plot spindles
         rand_idxs = randperm(size(M1_spind_snapshots,1));
         if size(M1_spind_snapshots,1) > max_to_plot
             rand_idxs = rand_idxs(1:max_to_plot);
@@ -3638,7 +3676,7 @@ if enabled(29)
     clearvars -except rootpath origin_rootpath animal param enabled;
 end
 
-%% Create Polar Histogram of Selected Neurons' Spindle Spike Phase data (30)
+%% Create Polar Histogram of Selected Neurons' Spindle Spike Phase data (30) (Unfinished)
 
 if enabled(30)
     disp('Block 30...')
@@ -3680,6 +3718,8 @@ if enabled(31)
     disp('Block 31...')
     addpath(genpath('Z:\Matlab for analysis\eeglab\functions'))
     rmpath(genpath('Z:\Matlab for analysis\eeglab\functions\octavefunc\signal'))
+    
+    %Parameters
     pre_margin = 0.05; %in seconds
     post_margin = 0.05; %in seconds
     trace_margin = 1; %in seconds - Spindles closer than this to the edge of the recording will be skipped to avoid index out of bounds errors
@@ -3689,6 +3729,7 @@ if enabled(31)
     max_idx_err = 10;
     kernel_stdv = 5;
     control_offsets = [-5, -10];
+    
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Filtered_Sleep_data.mat'])
@@ -3712,7 +3753,7 @@ if enabled(31)
                         warning('A spindle index had greater offset from a cycle peak than is allowed by the threshold');
                     end
                 end
-                
+                %M1 Spindles
                 raw_CCH = nan((sum(param.M1_task_related_neurons{day}(:)) * (sum(param.M1_task_related_neurons{day}(:))-1))/2,(pre_cycles+post_cycles),round((pre_margin+post_margin)*1000)+1);
                 pair_idx = 0;
                 for M1_neuron1 = 1:(param.M1_chans * param.M1_neurons)
@@ -3728,6 +3769,7 @@ if enabled(31)
                                         cycle_start_idx = peak_idxs(spindle_idxs(spindle)+(cycle-1));
                                         cycle_end_idx = peak_idxs(spindle_idxs(spindle)+(cycle));
                                         
+                                        %Neuron 1 spikes
                                         M1_cycle_spikes1 = M1_spike_timestamps{M1_neuron1}(M1_spike_timestamps{M1_neuron1} > (cycle_start_idx/param.M1_Fs)  &  M1_spike_timestamps{M1_neuron1} < (cycle_end_idx/param.M1_Fs));
                                         for M1_spiketime1 = M1_cycle_spikes1
                                             M1_spikes2 = M1_spike_timestamps{M1_neuron2}(M1_spike_timestamps{M1_neuron2} >= (M1_spiketime1 - pre_margin) & M1_spike_timestamps{M1_neuron2} <= (M1_spiketime1 + post_margin));
@@ -3735,6 +3777,7 @@ if enabled(31)
                                             lag_hists = cat(1,lag_hists,histcounts(M1_spikes2,(-(round(pre_margin*1000)+0.5)):(round(post_margin*1000)+0.5)));
                                         end
                                         
+                                        %Neuron 2 spikes
                                         M1_cycle_spikes2 = M1_spike_timestamps{M1_neuron2}(M1_spike_timestamps{M1_neuron2} > (cycle_start_idx/param.M1_Fs)  &  M1_spike_timestamps{M1_neuron2} < (cycle_end_idx/param.M1_Fs));
                                         for M1_spiketime2 = M1_cycle_spikes2
                                             M1_spikes1 = M1_spike_timestamps{M1_neuron1}(M1_spike_timestamps{M1_neuron1} >= (M1_spiketime2 - pre_margin) & M1_spike_timestamps{M1_neuron1} <= (M1_spiketime2 + post_margin));
@@ -3754,13 +3797,12 @@ if enabled(31)
                         end
                     end
                 end
-                
-                
                 shuffled_CCH = nan((sum(param.M1_task_related_neurons{day}(:)) * (sum(param.M1_task_related_neurons{day}(:))-1))/2,(pre_cycles+post_cycles),round((pre_margin+post_margin)*1000)+1,shuffle_reps);
                 shuffled_spindle_idxs = nan(shuffle_reps,length(spindle_idxs));
                 for shuffle = 1:shuffle_reps
                     shuffled_spindle_idxs(shuffle,:) = randperm(length(spindle_idxs));
                 end
+                %Cb spindles
                 pair_idx = 0;
                 for M1_neuron1 = 1:(param.M1_chans * param.M1_neurons)
                     if param.M1_task_related_neurons{day}(M1_neuron1)
@@ -3776,7 +3818,7 @@ if enabled(31)
                                             cycle_start_idx = peak_idxs(spindle_idxs(spindle)+(cycle-1));
                                             cycle_end_idx = peak_idxs(spindle_idxs(spindle)+(cycle));
                                             
-                                            
+                                            %Neuron 1 spikes
                                             M1_cycle_spikes1 = M1_spike_timestamps{M1_neuron1}(M1_spike_timestamps{M1_neuron1} > (cycle_start_idx/param.M1_Fs)  &  M1_spike_timestamps{M1_neuron1} < (cycle_end_idx/param.M1_Fs));
                                             M1_cycle_spikes1 = M1_cycle_spikes1 + (peak_idxs(spindle_idxs(shuffled_spindle_idxs(shuffle,spindle)))/param.M1_Fs) - (peak_idxs(spindle_idxs(spindle))/param.M1_Fs);
                                             for M1_spiketime1 = M1_cycle_spikes1
@@ -3785,6 +3827,7 @@ if enabled(31)
                                                 lag_hists = cat(1,lag_hists,histcounts(M1_spikes2,(-(round(pre_margin*1000)+0.5)):(round(post_margin*1000)+0.5)));
                                             end
                                             
+                                            %Neuron 2 spikes
                                             M1_cycle_spikes2 = M1_spike_timestamps{M1_neuron2}(M1_spike_timestamps{M1_neuron2} > (cycle_start_idx/param.M1_Fs)  &  M1_spike_timestamps{M1_neuron2} < (cycle_end_idx/param.M1_Fs));
                                             M1_cycle_spikes2 = M1_cycle_spikes2 + (peak_idxs(spindle_idxs(shuffled_spindle_idxs(shuffle,spindle)))/param.M1_Fs) - (peak_idxs(spindle_idxs(spindle))/param.M1_Fs);
                                             for M1_spiketime2 = M1_cycle_spikes2
@@ -3807,7 +3850,7 @@ if enabled(31)
                     end
                 end
                 
-                
+                %Smooth CCH
                 ave_shuffled_CCH = mean(shuffled_CCH,4);
                 corrected_CCH = raw_CCH-ave_shuffled_CCH;
                 kernel = gausswin(size(corrected_CCH,3),size(corrected_CCH,3)/kernel_stdv);
@@ -3817,6 +3860,7 @@ if enabled(31)
                         smoothed_CCH(i,j,:) = conv(squeeze(corrected_CCH(i,j,:)),kernel,'same');
                     end
                 end
+                %Calculate means
                 [peak_val,peak_idx] = max(smoothed_CCH,[],3);
                 peak_time = peak_idx - (round(pre_margin * 1000) + 1);
                 pair_peaks_mean = mean(peak_val,1);
@@ -3858,7 +3902,7 @@ if enabled(31)
 end
 
 %% HPC Normalized M1 Spike-spike within area cofiring in M1 spindle cycles using shuffling (31.5)
-
+% Same as codeblock 31 but for the HPC 
 if false
     if isunix  %#ok<UNRCH>
         addpath(genpath('/common/fleischerp/HPC_code'))
@@ -4059,11 +4103,13 @@ if false
 end
 
 %% Normalized Cb Spike-spike within area cofiring in Cb spindle cycles using shuffling (32)
-
+%Same as codeblock 31 but for Cb spikes
 if enabled(32)
     disp('Block 32...')
     addpath(genpath('Z:\Matlab for analysis\eeglab\functions'))
     rmpath(genpath('Z:\Matlab for analysis\eeglab\functions\octavefunc\signal'))
+    
+    %Parameters
     pre_margin = 0.05; %in seconds
     post_margin = 0.05; %in seconds
     trace_margin = 1; %in seconds - Spindles closer than this to the edge of the recording will be skipped to avoid index out of bounds errors
@@ -4073,6 +4119,7 @@ if enabled(32)
     max_idx_err = 10;
     kernel_stdv = 5;
     control_offsets = [-5, -10];
+    
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Filtered_Sleep_data.mat'])
@@ -4096,7 +4143,7 @@ if enabled(32)
                         warning('A spindle index had greater offset from a cycle peak than is allowed by the threshold');
                     end
                 end
-                
+                %M1 Spindles
                 raw_CCH = nan((sum(param.Cb_task_related_neurons{day}(:)) * (sum(param.Cb_task_related_neurons{day}(:))-1))/2,(pre_cycles+post_cycles),round((pre_margin+post_margin)*1000)+1);
                 pair_idx = 0;
                 for Cb_neuron1 = 1:(param.Cb_chans * param.Cb_neurons)
@@ -4112,6 +4159,7 @@ if enabled(32)
                                         cycle_start_idx = peak_idxs(spindle_idxs(spindle)+(cycle-1));
                                         cycle_end_idx = peak_idxs(spindle_idxs(spindle)+(cycle));
                                         
+                                        %Neuron 1 spikes
                                         Cb_cycle_spikes1 = Cb_spike_timestamps{Cb_neuron1}(Cb_spike_timestamps{Cb_neuron1} > (cycle_start_idx/param.Cb_Fs)  &  Cb_spike_timestamps{Cb_neuron1} < (cycle_end_idx/param.Cb_Fs));
                                         for Cb_spiketime1 = Cb_cycle_spikes1
                                             Cb_spikes2 = Cb_spike_timestamps{Cb_neuron2}(Cb_spike_timestamps{Cb_neuron2} >= (Cb_spiketime1 - pre_margin) & Cb_spike_timestamps{Cb_neuron2} <= (Cb_spiketime1 + post_margin));
@@ -4119,6 +4167,7 @@ if enabled(32)
                                             lag_hists = cat(1,lag_hists,histcounts(Cb_spikes2,(-(round(pre_margin*1000)+0.5)):(round(post_margin*1000)+0.5)));
                                         end
                                         
+                                        %Neuron 2 spikes
                                         Cb_cycle_spikes2 = Cb_spike_timestamps{Cb_neuron2}(Cb_spike_timestamps{Cb_neuron2} > (cycle_start_idx/param.Cb_Fs)  &  Cb_spike_timestamps{Cb_neuron2} < (cycle_end_idx/param.Cb_Fs));
                                         for Cb_spiketime2 = Cb_cycle_spikes2
                                             Cb_spikes1 = Cb_spike_timestamps{Cb_neuron1}(Cb_spike_timestamps{Cb_neuron1} >= (Cb_spiketime2 - pre_margin) & Cb_spike_timestamps{Cb_neuron1} <= (Cb_spiketime2 + post_margin));
@@ -4138,13 +4187,12 @@ if enabled(32)
                         end
                     end
                 end
-                
-                
                 shuffled_CCH = nan((sum(param.Cb_task_related_neurons{day}(:)) * sum(param.Cb_task_related_neurons{day}(:)))/2,(pre_cycles+post_cycles),round((pre_margin+post_margin)*1000)+1,shuffle_reps);
                 shuffled_spindle_idxs = nan(shuffle_reps,length(spindle_idxs));
                 for shuffle = 1:shuffle_reps
                     shuffled_spindle_idxs(shuffle,:) = randperm(length(spindle_idxs));
                 end
+                %Cb spindles
                 pair_idx = 0;
                 for Cb_neuron1 = 1:(param.Cb_chans * param.Cb_neurons)
                     if param.Cb_task_related_neurons{day}(Cb_neuron1)
@@ -4160,7 +4208,7 @@ if enabled(32)
                                             cycle_start_idx = peak_idxs(spindle_idxs(spindle)+(cycle-1));
                                             cycle_end_idx = peak_idxs(spindle_idxs(spindle)+(cycle));
                                             
-                                            
+                                            %Neuron 1 spikes
                                             Cb_cycle_spikes1 = Cb_spike_timestamps{Cb_neuron1}(Cb_spike_timestamps{Cb_neuron1} > (cycle_start_idx/param.Cb_Fs)  &  Cb_spike_timestamps{Cb_neuron1} < (cycle_end_idx/param.Cb_Fs));
                                             Cb_cycle_spikes1 = Cb_cycle_spikes1 + (peak_idxs(spindle_idxs(shuffled_spindle_idxs(shuffle,spindle)))/param.Cb_Fs) - (peak_idxs(spindle_idxs(spindle))/param.Cb_Fs);
                                             for Cb_spiketime1 = Cb_cycle_spikes1
@@ -4169,6 +4217,7 @@ if enabled(32)
                                                 lag_hists = cat(1,lag_hists,histcounts(Cb_spikes2,(-(round(pre_margin*1000)+0.5)):(round(post_margin*1000)+0.5)));
                                             end
                                             
+                                            %Neuron 2 spikes
                                             Cb_cycle_spikes2 = Cb_spike_timestamps{Cb_neuron2}(Cb_spike_timestamps{Cb_neuron2} > (cycle_start_idx/param.Cb_Fs)  &  Cb_spike_timestamps{Cb_neuron2} < (cycle_end_idx/param.Cb_Fs));
                                             Cb_cycle_spikes2 = Cb_cycle_spikes2 + (peak_idxs(spindle_idxs(shuffled_spindle_idxs(shuffle,spindle)))/param.Cb_Fs) - (peak_idxs(spindle_idxs(spindle))/param.Cb_Fs);
                                             for Cb_spiketime2 = Cb_cycle_spikes2
@@ -4191,7 +4240,7 @@ if enabled(32)
                     end
                 end
                 
-                
+                %Smooth CCH
                 ave_shuffled_CCH = mean(shuffled_CCH,4);
                 corrected_CCH = raw_CCH-ave_shuffled_CCH;
                 kernel = gausswin(size(corrected_CCH,3),size(corrected_CCH,3)/kernel_stdv);
@@ -4201,6 +4250,7 @@ if enabled(32)
                         smoothed_CCH(i,j,:) = conv(squeeze(corrected_CCH(i,j,:)),kernel,'same');
                     end
                 end
+                %Calculate means
                 [peak_val,peak_idx] = max(smoothed_CCH,[],3);
                 peak_time = peak_idx - (round(pre_margin * 1000) + 1);
                 pair_peaks_mean = mean(peak_val,1);
@@ -4242,7 +4292,7 @@ if enabled(32)
 end
 
 %% HPC Normalized Cb Spike-spike within area cofiring in Cb spindle cycles using shuffling (32.5)
-
+% Same as codeblock 32 but for the HPC 
 if false
     if isunix  %#ok<UNRCH>
         addpath(genpath('/common/fleischerp/HPC_code'))
@@ -4449,14 +4499,16 @@ end
 
 if enabled(33)
     disp('Block 33...')
-    M1_spindle_SO_dist = cell(param.days,param.sleep_blocks);
-    Cb_spindle_SO_dist = cell(param.days,param.sleep_blocks);
     edges = 0:.25:10;
     bin_centers = edges(1:end-1) + ((edges(2) - edges(1))/2);
+    
+    M1_spindle_SO_dist = cell(param.days,param.sleep_blocks);
+    Cb_spindle_SO_dist = cell(param.days,param.sleep_blocks);
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Sleep_data.mat'])
             
+            %M1: Calculate the nearest leading SO to each spindle
             so_timestmps = M1_data.so_delta.so_up_states;
             spindle_timestmps = M1_data.spindles{1}.pks;
             diff_matrix =  spindle_timestmps - so_timestmps';
@@ -4470,6 +4522,7 @@ if enabled(33)
             saveas(gcf,[rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/M1_Spindle_Nesting_Distance.fig'])
             close all
                 
+            %Cb: Calculate the nearest leading SO to each spindle
             so_timestmps = Cb_data.so_delta.so_up_states;
             spindle_timestmps = Cb_data.spindles{1}.pks;
             diff_matrix =  spindle_timestmps - so_timestmps';
@@ -4484,6 +4537,7 @@ if enabled(33)
             close all
         end
     end
+    %Save data for multi_animal_analysis
     load([rootpath,animal,'/Shared_Data.mat'])
     shared_data.M1_spindle_SO_dist = M1_spindle_SO_dist;
     shared_data.Cb_spindle_SO_dist = Cb_spindle_SO_dist;
@@ -4496,27 +4550,33 @@ end
 
 if enabled(34)
     disp('Block 34...')
-    day_range = 1:3;
+    day_range = 1:5;
+    nesting_threshold = 1.5; %in seconds
+
     M1_all_days = nan(2,length(param.M1_good_chans),param.days);
     Cb_all_days = nan(2,length(param.Cb_good_chans),param.days);
-    nesting_threshold = 1.5; %in seconds
     for day = 1:param.days
+        %Block 1 (this analysis specifically uses 2 sleep blocks so I hard coded it that way instead of using param.blocks)
         load([rootpath,animal,'/Day',num2str(day),'/Sleep1/Channel_Sleep_data.mat'])
         M1_spindle_count = nan(2,size(M1_channel_data.spindles,2));
         Cb_spindle_count = nan(2,size(Cb_channel_data.spindles,2));
+        %Count nested spindles in each channel
         for M1_chan = 1:size(M1_channel_data.spindles,2)
-            nested_idxs = find_nested(M1_channel_data.so_delta(M1_chan).so_up_states,M1_channel_data.spindles{M1_chan}.pks,nesting_threshold);
+            nested_idxs = find_nested(M1_channel_data.so_delta(M1_chan).so_up_states, M1_channel_data.spindles{M1_chan}.pks, nesting_threshold);
             M1_spindle_count(1,M1_chan) = sum(nested_idxs);
         end
         for Cb_chan = 1:size(Cb_channel_data.spindles,2)
             nested_idxs = find_nested(Cb_channel_data.so_delta(Cb_chan).so_up_states,Cb_channel_data.spindles{Cb_chan}.pks,nesting_threshold);
             Cb_spindle_count(1,Cb_chan) = sum(nested_idxs);
         end
+        %Calculate nested spindles per minute of sleep
         sleep_minutes = sum(M1_channel_data.sleep_idx) / (M1_channel_data.Fs_LFP * 60);
         M1_spindle_count(1,:) = M1_spindle_count(1,:)/sleep_minutes;
         Cb_spindle_count(1,:) = Cb_spindle_count(1,:)/sleep_minutes;
-            
+        
+        %Block 2
         load([rootpath,animal,'/Day',num2str(day),'/Sleep2/Channel_Sleep_data.mat'])
+        %Count nested spindles in each channel
         for M1_chan = 1:size(M1_channel_data.spindles,2)
             nested_idxs = find_nested(M1_channel_data.so_delta(M1_chan).so_up_states,M1_channel_data.spindles{M1_chan}.pks,nesting_threshold);
             M1_spindle_count(2,M1_chan) = sum(nested_idxs);
@@ -4525,12 +4585,14 @@ if enabled(34)
             nested_idxs = find_nested(Cb_channel_data.so_delta(Cb_chan).so_up_states,Cb_channel_data.spindles{Cb_chan}.pks,nesting_threshold);
             Cb_spindle_count(2,Cb_chan) = sum(nested_idxs);
         end
+        %Calculate nested spindles per minute of sleep
         sleep_minutes = sum(M1_channel_data.sleep_idx) / (M1_channel_data.Fs_LFP * 60);
         M1_spindle_count(2,:) = M1_spindle_count(2,:)/sleep_minutes;
         Cb_spindle_count(2,:) = Cb_spindle_count(2,:)/sleep_minutes;
+        
         M1_all_days(:,:,day) = M1_spindle_count;
         Cb_all_days(:,:,day) = Cb_spindle_count;
-        
+        %Plot per day results
         hold on
         scatter(M1_spindle_count(1,:),M1_spindle_count(2,:));
         line([0,20],[0,20])
@@ -4543,6 +4605,7 @@ if enabled(34)
         saveas(gcf,[rootpath,animal,'/Day',num2str(day),'/Cb_Nested_Spindle_S1vS2_Rate.fig'])
         close all
     end
+    %Calculate and plot all days' results
     M1_comb_data = nan(2,0);
     Cb_comb_data = nan(2,0);
     for day = day_range
@@ -4579,7 +4642,9 @@ if enabled(35)
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Sleep_data.mat'])
+            %Find time difference between each M1 SO and Cb SO
             dists = abs(M1_data.so_delta.so_up_states - Cb_data.so_delta.so_up_states');
+            %Find the lowest time difference for each member of the larger SO group (M1 or Cb)
             if length(M1_data.so_delta.so_up_states) > length(Cb_data.so_delta.so_up_states)
                 minimums = min(dists,[],1)';
                 cooccur_idxs = minimums < proximity_threshold;
@@ -4589,9 +4654,12 @@ if enabled(35)
                 cooccur_idxs = minimums < proximity_threshold;
                 co_SO = M1_data.so_delta.so_up_states(cooccur_idxs);
             end
+            %Find the ratio of SOs with a time differences that falls below the threshold to the total population of SOs
             SO_ratios(day,block) = length(co_SO)/length(minimums);
             
+            %Find time difference between each M1 SO and Cb Delta Wave
             dists = abs(M1_data.so_delta.delta_up_states - Cb_data.so_delta.delta_up_states');
+            %Find the lowest time difference for each member of the larger Delta group (M1 or Cb)
             if length(M1_data.so_delta.delta_up_states) > length(Cb_data.so_delta.delta_up_states)
                 minimums = min(dists,[],1)';
                 cooccur_idxs = minimums < proximity_threshold;
@@ -4601,11 +4669,13 @@ if enabled(35)
                 cooccur_idxs = minimums < proximity_threshold;
                 co_delta = M1_data.so_delta.delta_up_states(cooccur_idxs);
             end
+            %Find the ratio of Deltas with a time differences that falls below the threshold to the total population of Deltas
             delta_ratios(day,block) = length(co_delta)/length(minimums);
             
             save([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_data.mat'], 'M1_data', 'Cb_data', 'co_SO', 'co_delta')
         end
     end
+    %Plot
     bar(1:param.days, delta_ratios)
     saveas(gcf,[rootpath,animal,'/cooccuring_delta_ratios.fig'])
     close all;
@@ -4666,7 +4736,7 @@ if enabled(37)
             load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Sleep_data.mat'])
             load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Spike_timestamps.mat']);
             load([rootpath,animal,'/Day',num2str(day),'/',param.block_names{1},'/PC_reach_patterns.mat']);
-            
+            %Collect sleep M1 spiking histograms 
             if ~isempty(day_neurons_of_interest_M1)
                 edges = 0.5:(length(M1_data.LFP)+0.5);
                 edges = edges/M1_data.Fs_LFP;
@@ -4680,7 +4750,7 @@ if enabled(37)
                 sleep_cat_hist = sleep_cat_hist(:,M1_data.sleep_idx);
                 eval(['sleep' num2str(block) '_cat_hist_M1 = sleep_cat_hist;']);
             end
-                
+            %Collect sleep Cb spiking histograms 
             if ~isempty(day_neurons_of_interest_Cb)
                 edges = 0.5:(length(Cb_data.LFP)+0.5);
                 edges = edges/Cb_data.Fs_LFP;
@@ -4695,7 +4765,8 @@ if enabled(37)
                 eval(['sleep' num2str(block) '_cat_hist_Cb = sleep_cat_hist;']);
             end
         end
-        
+        %M1
+        %Transform spike histograms into PCA space
         if ~isempty(day_neurons_of_interest_M1)
             Activities_pre_M1 = assembly_activity(M1_patterns,sleep1_cat_hist_M1);
             Activities_post_M1 = assembly_activity(M1_patterns,sleep2_cat_hist_M1);
@@ -4706,6 +4777,7 @@ if enabled(37)
             %shared_data.M1_reach_assembly_eigen_ratios{day} = M1_eigen_lambda_ratio;
             
             for i = 1:(size(M1_patterns,2))
+                %Begin figure
                 figure(1); clf;
                 subplot(311)
                 plot(Activities_pre_M1(i,:))
@@ -4718,13 +4790,13 @@ if enabled(37)
                 title('Ensemble Strength Post-Learning Sleep Block');
                 
                 subplot(313)
-                
+                %Calculate means and stdv
                 Mn(i,1) = mean(Activities_pre_M1(i,:));
                 Mn(i,2)= mean(Activities_post_M1(i,:));
                 Err(i,1) = std(Activities_pre_M1(i,:))/sqrt(length(Activities_pre_M1(i,:)));
                 Err(i,2) = std(Activities_post_M1(i,:))/sqrt(length(Activities_pre_M1(i,:)));
                 [~,p]=ttest2(Activities_pre_M1(i,:),Activities_post_M1(i,:)); %SIG TEST
-                
+                %Plot means and stdv
                 errorbar(Mn(i,:),Err(i,:));
                 title('Mean Change in Activation Strength');
                 pval = strcat('p = ',num2str(p));
@@ -4737,6 +4809,7 @@ if enabled(37)
                 max_post=max(Activities_post_M1(i,:));
                 
                 maxY=350;
+                %Plot assembly activation
                 figure(2)
                 subplot(221);plot(abs(Activities_pre_M1(i,:)));axis([0 length(Activities_pre_M1) 0 maxY]);title('Pre Sleep Activation')
                 subplot(222);plot(abs(Activities_post_M1(i,:)));axis([0 length(Activities_post_M1) 0 maxY]);title('Post Sleep Activation')
@@ -4749,7 +4822,7 @@ if enabled(37)
                 filename1=[rootpath,animal,'/Day',num2str(day),'/Pre-Post_Activation_Pre-Post_Activation',num2str(i) '_M1.tiff'];
                 saveas(gcf,filename1);
                 close all
-                
+                %Plot assembly activation histogram
                 figure(3)
                 plot([cumsum(post_hist)-cumsum(pre_hist)],'b');
                 filename2=[rootpath,animal,'/Day',num2str(day),'/Pre-Post_Activation_Bin_Pre-Post_Diff',num2str(i) '_M1.tiff'];
@@ -4768,7 +4841,8 @@ if enabled(37)
             %shared_data.M1_reach_assembly_reactivation{day,2} = [];
             %shared_data.M1_reach_assembly_eigen_ratios{day} = [];
         end
-        
+        %Cb
+        %Transform spike histograms into PCA space
         if ~isempty(day_neurons_of_interest_Cb)
             Activities_pre_Cb = assembly_activity(Cb_patterns,sleep1_cat_hist_Cb);
             Activities_post_Cb = assembly_activity(Cb_patterns,sleep2_cat_hist_Cb);
@@ -4779,7 +4853,7 @@ if enabled(37)
             %shared_data.Cb_reach_assembly_eigen_ratios{day} = Cb_eigen_lambda_ratio;
             
             for i = 1:(size(Cb_patterns,2))
-                
+                %Begin figure
                 figure(1); clf;
                 subplot(311)
                 plot(Activities_pre_Cb(i,:))
@@ -4792,13 +4866,13 @@ if enabled(37)
                 title('Ensemble Strength Post-Learning Sleep Block');
                 
                 subplot(313)
-                
+                %Calculate means and stdv
                 Mn(i,1) = mean(Activities_pre_Cb(i,:));
                 Mn(i,2)= mean(Activities_post_Cb(i,:));
                 Err(i,1) = std(Activities_pre_Cb(i,:))/sqrt(length(Activities_pre_Cb(i,:)));
                 Err(i,2) = std(Activities_post_Cb(i,:))/sqrt(length(Activities_pre_Cb(i,:)));
                 [~,p]=ttest2(Activities_pre_Cb(i,:),Activities_post_Cb(i,:)); %SIG TEST
-                
+                %Plot means and stdv
                 errorbar(Mn(i,:),Err(i,:));
                 title('Mean Change in Activation Strength');
                 pval = strcat('p = ',num2str(p));
@@ -4811,6 +4885,7 @@ if enabled(37)
                 max_post=max(Activities_post_Cb(i,:));
                 
                 maxY=350;
+                %Plot assembly activation
                 figure(2)
                 subplot(221);plot(abs(Activities_pre_Cb(i,:)));axis([0 length(Activities_pre_Cb) 0 maxY]);title('Pre Sleep Activation')
                 subplot(222);plot(abs(Activities_post_Cb(i,:)));axis([0 length(Activities_post_Cb) 0 maxY]);title('Post Sleep Activation')
@@ -4823,7 +4898,7 @@ if enabled(37)
                 filename1=[rootpath,animal,'/Day',num2str(day),'/Pre-Post_Activation_Pre-Post_Activation',num2str(i) '_Cb.tiff'];
                 saveas(gcf,filename1);
                 close all
-                
+                %Plot assembly activation histogram
                 figure(3)
                 plot([cumsum(post_hist)-cumsum(pre_hist)],'b');
                 filename2=[rootpath,animal,'/Day',num2str(day),'/Pre-Post_Activation_Bin_Pre-Post_Diff',num2str(i) '_Cb.tiff'];
@@ -4853,6 +4928,7 @@ end
 
 if enabled(38)
     disp('Block 38...')
+    %Parameters
     pre_margin = 0.05; %in seconds
     post_margin = 0.05; %in seconds
     trace_margin = 1; %in seconds - Spindles closer than this to the edge of the recording will be skipped to avoid index out of bounds errors
@@ -4876,6 +4952,7 @@ if enabled(38)
     load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Filtered_Sleep_data.mat'])
     load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Spike_timestamps.mat']);
     
+    %Extract phases to find the indexs of the peaks of the filtered LFP
     hilbert_LFP = hilbert(Cb_filt_data.LFP);
     inst_phase = unwrap(angle(hilbert_LFP));%inst phase
     radial_phase = mod(inst_phase,2*pi);
@@ -4901,7 +4978,7 @@ if enabled(38)
                 warning('A spindle index had greater offset from a cycle peak than is allowed by the threshold');
             end
         end
-        
+        %Identify selected Cb neurons
         raw_CCH = nan((pre_cycles+post_cycles),round((pre_margin+post_margin)*1000)+1);
         neuron_idxs = find(param.Cb_task_related_neurons{day});
         Cb_neuron1 = neuron_idxs(neuron1_idx);
@@ -4914,14 +4991,14 @@ if enabled(38)
                 
                 cycle_start_idx = peak_idxs(spindle_idxs(spindle)+(cycle-1));
                 cycle_end_idx = peak_idxs(spindle_idxs(spindle)+(cycle));
-                
+                %Create histograms of lag between all neuron 2 spikes and the current neuron 1 spike
                 Cb_cycle_spikes1 = Cb_spike_timestamps{Cb_neuron1}(Cb_spike_timestamps{Cb_neuron1} > (cycle_start_idx/param.Cb_Fs)  &  Cb_spike_timestamps{Cb_neuron1} < (cycle_end_idx/param.Cb_Fs));
                 for Cb_spiketime1 = Cb_cycle_spikes1
                     Cb_spikes2 = Cb_spike_timestamps{Cb_neuron2}(Cb_spike_timestamps{Cb_neuron2} >= (Cb_spiketime1 - pre_margin) & Cb_spike_timestamps{Cb_neuron2} <= (Cb_spiketime1 + post_margin));
                     Cb_spikes2 = Cb_spikes2 - Cb_spiketime1; %It should be 2 - 1 for both
                     lag_hists = cat(1,lag_hists,histcounts(Cb_spikes2,bin_edges));
                 end
-                
+                %Create histograms of lag between all neuron 1 spikes and the current neuron 2 spike
                 Cb_cycle_spikes2 = Cb_spike_timestamps{Cb_neuron2}(Cb_spike_timestamps{Cb_neuron2} > (cycle_start_idx/param.Cb_Fs)  &  Cb_spike_timestamps{Cb_neuron2} < (cycle_end_idx/param.Cb_Fs));
                 for Cb_spiketime2 = Cb_cycle_spikes2
                     Cb_spikes1 = Cb_spike_timestamps{Cb_neuron1}(Cb_spike_timestamps{Cb_neuron1} >= (Cb_spiketime2 - pre_margin) & Cb_spike_timestamps{Cb_neuron1} <= (Cb_spiketime2 + post_margin));
@@ -4938,7 +5015,7 @@ if enabled(38)
             end
         end
         raw_CCH(:,:) = pair_data;
-        
+        %Prepare shuffled data
         shuffled_CCH = nan((pre_cycles+post_cycles),round((pre_margin+post_margin)*1000)+1,shuffle_reps);
         shuffled_spindle_idxs = nan(shuffle_reps,length(spindle_idxs));
         for shuffle = 1:shuffle_reps
@@ -4957,7 +5034,7 @@ if enabled(38)
                     cycle_start_idx = peak_idxs(spindle_idxs(spindle)+(cycle-1));
                     cycle_end_idx = peak_idxs(spindle_idxs(spindle)+(cycle));
                     
-                    
+                    %Create histograms of lag between all neuron 2 spikes and the current neuron 1 spike
                     Cb_cycle_spikes1 = Cb_spike_timestamps{Cb_neuron1}(Cb_spike_timestamps{Cb_neuron1} > (cycle_start_idx/param.Cb_Fs)  &  Cb_spike_timestamps{Cb_neuron1} < (cycle_end_idx/param.Cb_Fs));
                     Cb_cycle_spikes1 = Cb_cycle_spikes1 + (peak_idxs(spindle_idxs(shuffled_spindle_idxs(shuffle,spindle)))/param.Cb_Fs) - (peak_idxs(spindle_idxs(spindle))/param.Cb_Fs);
                     for Cb_spiketime1 = Cb_cycle_spikes1
@@ -4965,7 +5042,7 @@ if enabled(38)
                         Cb_spikes2 = Cb_spikes2 - Cb_spiketime1; %It should be 2 - 1 for both
                         lag_hists = cat(1,lag_hists,histcounts(Cb_spikes2,bin_edges));
                     end
-                    
+                    %Create histograms of lag between all neuron 1 spikes and the current neuron 2 spike
                     Cb_cycle_spikes2 = Cb_spike_timestamps{Cb_neuron2}(Cb_spike_timestamps{Cb_neuron2} > (cycle_start_idx/param.Cb_Fs)  &  Cb_spike_timestamps{Cb_neuron2} < (cycle_end_idx/param.Cb_Fs));
                     Cb_cycle_spikes2 = Cb_cycle_spikes2 + (peak_idxs(spindle_idxs(shuffled_spindle_idxs(shuffle,spindle)))/param.Cb_Fs) - (peak_idxs(spindle_idxs(spindle))/param.Cb_Fs);
                     for Cb_spiketime2 = Cb_cycle_spikes2
@@ -4983,13 +5060,14 @@ if enabled(38)
                 shuffled_CCH(:,:,shuffle) = pair_data;
             end
         end
+        %Correct raw CCH using shuffled CCH
         ave_shuffled_CCH = mean(shuffled_CCH,3);
         corrected_CCH = raw_CCH-ave_shuffled_CCH;
-        
+        %Peak
         raw_peak_CCH = sum(raw_CCH([5,6],:),1);
         shuf_peak_CCH = sum(ave_shuffled_CCH([5,6],:),1);
         corr_peak_CCH = sum(corrected_CCH([5,6],:),1);
-        
+        %Plot
         bar(bin_centers, raw_peak_CCH)
         filename=[rootpath,animal,'/Cofiring_Raw_Peak_CCH_Cb_offset_', num2str(offset), '.fig'];
         saveas(gcf,filename)
@@ -5003,10 +5081,11 @@ if enabled(38)
         saveas(gcf,filename)
         close all
         
+        %Tail
         raw_tail_CCH = sum(raw_CCH([1,10],:),1);
         shuf_tail_CCH = sum(ave_shuffled_CCH([1,10],:),1);
         corr_tail_CCH = sum(corrected_CCH([1,10],:),1);
-        
+        %Plot
         bar(bin_centers, raw_tail_CCH)
         filename=[rootpath,animal,'/Cofiring_Raw_Tail_CCH_Cb_offset_', num2str(offset), '.fig'];
         saveas(gcf,filename)
@@ -5028,6 +5107,7 @@ end
 if enabled(39)
     disp('Block 39...')
     addpath('Z:\Matlab for analysis\CircStat2012a');
+    %Parameters
     control_offsets = [-5, -10];
     group_names = {'Tail' 'Peak'};
     group_cycles = [[1;10] [5;6]];%[[1;2;9;10] [4;5;6;7]];
@@ -5037,18 +5117,21 @@ if enabled(39)
     edges = exp(edge_exp);
     bin_centers = (diff(edges)/2) + edges(1:end-1);
 
+    %Preallocation
     M1_Pval = nan(1,0);
     M1_Tstat = nan(1,0);
     Cb_Pval = nan(1,0);
     Cb_Tstat = nan(1,0);
     
     for day = 1:param.days
+        %Real data
         M1_phases = cell([size(param.M1_task_related_neurons{1},1), size(param.M1_task_related_neurons{day},2), size(group_cycles,2)]);
         Cb_phases = cell([size(param.Cb_task_related_neurons{1},1), size(param.Cb_task_related_neurons{day},2), size(group_cycles,2)]);
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Spindle_spike_phasestamps.mat'])
             for group = 1:size(group_cycles,2)
                 for cycle = group_cycles(:,group)'
+                    %Collect phases
                     if cycle > size(prePeak_cycle_phases_M1_spindles_M1_spikes,3)
                         %postPeak
                         M1_phases(:,:,group) = cellfun(@horzcat,M1_phases(:,:,group),postPeak_cycle_phases_M1_spindles_M1_spikes(:,:,cycle - size(prePeak_cycle_phases_M1_spindles_M1_spikes,3)),'UniformOutput',false);
@@ -5061,7 +5144,7 @@ if enabled(39)
                 end
             end
         end
-        
+        %Control data
         M1_phases_c = cell([size(param.M1_task_related_neurons{1},1), size(param.M1_task_related_neurons{day},2)]);
         Cb_phases_c = cell([size(param.Cb_task_related_neurons{1},1), size(param.Cb_task_related_neurons{day},2)]);
         for offset = control_offsets
@@ -5080,7 +5163,7 @@ if enabled(39)
                 end
             end
         end
-    
+        %M1
         M1_Pval_day = nan(size(group_cycles,2),sum(param.M1_task_related_neurons{day}(:)));
         M1_Tstat_day = nan(size(group_cycles,2),sum(param.M1_task_related_neurons{day}(:)));
         M1_neuron_idx = 0;
@@ -5094,10 +5177,12 @@ if enabled(39)
                             test_success = false;
                             sub_set_ratio = 1.0;
                             while ~test_success
+                                %Collect real and control phases
                                 phases_1 = M1_phases{chan,neuron,group};
                                 phases_2 = M1_phases_c{chan,neuron};
                                 phases_1 = phases_1(randperm(length(phases_1),round(length(phases_1)*sub_set_ratio)));
                                 phases_2 = phases_2(randperm(length(phases_2),round(length(phases_2)*sub_set_ratio)));
+                                %Unequal means test
                                 try
                                     [M1_Pval_day(group, M1_neuron_idx), ~, M1_Tstat_day(group, M1_neuron_idx)] = circ_cmtest(phases_1, phases_2);
                                     test_success = true;
@@ -5111,7 +5196,7 @@ if enabled(39)
                 end
             end
         end
-        
+        %Cb
         Cb_Pval_day = nan(size(group_cycles,2),sum(param.Cb_task_related_neurons{day}(:)));
         Cb_Tstat_day = nan(size(group_cycles,2),sum(param.Cb_task_related_neurons{day}(:)));
         Cb_neuron_idx = 0;
@@ -5125,10 +5210,12 @@ if enabled(39)
                             test_success = false;
                             sub_set_ratio = 1.0;
                             while ~test_success
+                                %Collect real and control phases
                                 phases_1 = Cb_phases{chan,neuron,group};
                                 phases_2 = Cb_phases_c{chan,neuron};
                                 phases_1 = phases_1(randperm(length(phases_1),round(length(phases_1)*sub_set_ratio)));
                                 phases_2 = phases_2(randperm(length(phases_2),round(length(phases_2)*sub_set_ratio)));
+                                %Unequal means test
                                 try
                                     [Cb_Pval_day(group, Cb_neuron_idx), ~, Cb_Tstat_day(group, Cb_neuron_idx)] = circ_cmtest(phases_1, phases_2);
                                     test_success = true;
@@ -5142,7 +5229,7 @@ if enabled(39)
                 end
             end
         end
-        
+        %Collect p-value results
         M1_Pval = [M1_Pval M1_Pval_day];
         M1_Tstat = [M1_Tstat M1_Tstat_day];
         Cb_Pval = [Cb_Pval Cb_Pval_day];
@@ -5160,7 +5247,7 @@ if enabled(39)
     cum_count = cumsum(p_counts);
     p_ratio_cum = cum_count/size(M1_Pval,2);
     line(bin_centers,p_ratio_cum','Color',[0, 0, 1]);
-    
+    %0.05 significance boundary and misc
     line([.05 .05], [0 1], 'Color', [0 0 0], 'LineStyle','--');
     set(gca, 'XScale', 'log')
     xlim([bin_centers(1) bin_centers(end)])
@@ -5178,7 +5265,7 @@ if enabled(39)
     cum_count = cumsum(p_counts);
     p_ratio_cum = cum_count/size(Cb_Pval,2);
     line(bin_centers,p_ratio_cum','Color',[0, 0, 1]);
-    
+    %0.05 significance boundary and misc
     line([.05 .05], [0 1], 'Color', [0 0 0], 'LineStyle','--');
     set(gca, 'XScale', 'log')
     xlim([bin_centers(1) bin_centers(end)])
@@ -5194,6 +5281,7 @@ end
 if enabled(40)
     disp('Block 40...')
     addpath('Z:\Matlab for analysis\CircStat2012a');
+    %Parameters
     cross_area_bool = true;
     
     spindle_band = [10,15];
@@ -5219,13 +5307,15 @@ if enabled(40)
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Filtered_Sleep_data.mat'])
             load([rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Spike_timestamps.mat']);
+            %As before the cross-area stuff was added after the main code was written
             if cross_area_bool
                 temp = M1_filt_data;
                 M1_filt_data = Cb_filt_data;
                 Cb_filt_data = temp;
                 clear temp
             end
-            
+            %M1
+            %Collect spindle indexs, ignoring those too close to the start or end of the recording
             spindle_peak_idxs_M1 = round(M1_filt_data.Fs_LFP * (M1_filt_data.spindles{1}.pks));
             spindle_peak_idxs_M1(spindle_peak_idxs_M1 < pre_margin * M1_filt_data.Fs_LFP) = [];
             spindle_peak_idxs_M1(spindle_peak_idxs_M1 > length(M1_filt_data.LFP) - (post_margin * M1_filt_data.Fs_LFP)) = [];
@@ -5243,7 +5333,8 @@ if enabled(40)
                     warning('A spindle index had greater offset from a cycle peak than is allowed by the threshold');
                 end
             end
-            
+            %Cb
+            %Collect spindle indexs, ignoring those too close to the start or end of the recording
             spindle_peak_idxs_Cb = round(Cb_filt_data.Fs_LFP * (Cb_filt_data.spindles{1}.pks));
             spindle_peak_idxs_Cb(spindle_peak_idxs_Cb < pre_margin * Cb_filt_data.Fs_LFP) = [];
             spindle_peak_idxs_Cb(spindle_peak_idxs_Cb > length(Cb_filt_data.LFP) - (post_margin * Cb_filt_data.Fs_LFP)) = [];
@@ -5287,7 +5378,7 @@ if enabled(40)
             all_rhythms_Cb = all_rhythms_Cb(all_rhythms_Cb < ((length(Cb_filt_data.LFP)/Cb_filt_data.Fs_LFP)-post_margin));
             M1_spike_bools = nan(0, round((pre_margin + post_margin)/bin_width));
             Cb_spike_bools = nan(0, round((pre_margin + post_margin)/bin_width));
-            
+            %M1
             M1_peak_spike_phases = zeros(1,0);
             M1_tail_spike_phases = zeros(1,0);
             Cb_peak_spike_phases = zeros(1,0);
@@ -5300,18 +5391,19 @@ if enabled(40)
                 else
                     all_spike_times = M1_spike_timestamps{M1_neuron};
                 end
+                %Create spike histogram
                 spike_times = all_spike_times(all_spike_times >= ((center/param.M1_Fs) - pre_margin) & all_spike_times <= ((center/param.M1_Fs) + post_margin));
                 spike_times = spike_times - (center/param.M1_Fs);
                 cur_hist = histcounts(spike_times, -pre_margin:bin_width:post_margin);
                 M1_spike_bools = cat(1, M1_spike_bools, cur_hist);
-                
+                %Collect spike phases at spindle peaks 
                 peak_idxs_pre = all_spike_times >= (peak_idxs_M1(spindle_peak_idxs_M1(rhythm) - peak_range(2))/param.M1_Fs) & all_spike_times <= (peak_idxs_M1(spindle_peak_idxs_M1(rhythm) - peak_range(1))/param.M1_Fs);
                 peak_idxs_post = all_spike_times >= (peak_idxs_M1(spindle_peak_idxs_M1(rhythm) + peak_range(1))/param.M1_Fs) & all_spike_times <= (peak_idxs_M1(spindle_peak_idxs_M1(rhythm) + peak_range(2))/param.M1_Fs);
                 peak_spike_times = all_spike_times(peak_idxs_pre | peak_idxs_post);
                 peak_spike_phases = round(peak_spike_times * param.M1_Fs);
                 peak_spike_phases = radial_phase_M1(peak_spike_phases);
                 M1_peak_spike_phases = [M1_peak_spike_phases peak_spike_phases];
-                
+                %Collect spike phases at spindle tails 
                 tail_idxs_pre = all_spike_times >= (peak_idxs_M1(spindle_peak_idxs_M1(rhythm) - tail_range(2))/param.M1_Fs) & all_spike_times <= (peak_idxs_M1(spindle_peak_idxs_M1(rhythm) - tail_range(1))/param.M1_Fs);
                 tail_idxs_post = all_spike_times >= (peak_idxs_M1(spindle_peak_idxs_M1(rhythm) + tail_range(1))/param.M1_Fs) & all_spike_times <= (peak_idxs_M1(spindle_peak_idxs_M1(rhythm) + tail_range(2))/param.M1_Fs);
                 tail_spike_times = all_spike_times(tail_idxs_pre | tail_idxs_post);
@@ -5328,18 +5420,19 @@ if enabled(40)
                 else
                     all_spike_times = Cb_spike_timestamps{Cb_neuron};
                 end
+                %Create spike histogram
                 spike_times = all_spike_times(all_spike_times >= ((center/param.Cb_Fs) - pre_margin) & all_spike_times <= ((center/param.Cb_Fs) + post_margin));
                 spike_times = spike_times - (center/param.Cb_Fs);
                 cur_hist = histcounts(spike_times, -pre_margin:bin_width:post_margin);
                 Cb_spike_bools = cat(1, Cb_spike_bools, cur_hist);
-                
+                %Collect spike phases at spindle peaks 
                 peak_idxs_pre = all_spike_times >= (peak_idxs_Cb(spindle_peak_idxs_Cb(rhythm) - peak_range(2))/param.Cb_Fs) & all_spike_times <= (peak_idxs_Cb(spindle_peak_idxs_Cb(rhythm) - peak_range(1))/param.Cb_Fs);
                 peak_idxs_post = all_spike_times >= (peak_idxs_Cb(spindle_peak_idxs_Cb(rhythm) + peak_range(1))/param.Cb_Fs) & all_spike_times <= (peak_idxs_Cb(spindle_peak_idxs_Cb(rhythm) + peak_range(2))/param.Cb_Fs);
                 peak_spike_times = all_spike_times(peak_idxs_pre | peak_idxs_post);
                 peak_spike_phases = round(peak_spike_times * param.Cb_Fs);
                 peak_spike_phases = radial_phase_Cb(peak_spike_phases);
                 Cb_peak_spike_phases = [Cb_peak_spike_phases peak_spike_phases];
-                
+                %Collect spike phases at spindle tails 
                 tail_idxs_pre = all_spike_times >= (peak_idxs_Cb(spindle_peak_idxs_Cb(rhythm) - tail_range(2))/param.Cb_Fs) & all_spike_times <= (peak_idxs_Cb(spindle_peak_idxs_Cb(rhythm) - tail_range(1))/param.Cb_Fs);
                 tail_idxs_post = all_spike_times >= (peak_idxs_Cb(spindle_peak_idxs_Cb(rhythm) + tail_range(1))/param.Cb_Fs) & all_spike_times <= (peak_idxs_Cb(spindle_peak_idxs_Cb(rhythm) + tail_range(2))/param.Cb_Fs);
                 tail_spike_times = all_spike_times(tail_idxs_pre | tail_idxs_post);
@@ -5348,7 +5441,8 @@ if enabled(40)
                 Cb_tail_spike_phases = [Cb_tail_spike_phases tail_spike_phases];
             end
             
-            %plot([raster_x; raster_x],[0; 1]+raster_y,'LineWidth',1,'Color',rgb('Black'));
+            %M1
+            %plot rastor
             hold on
             for x = 1:size(M1_spike_bools,2)
                 for y = 1:min([size(M1_spike_bools,1), max_to_plot])
@@ -5363,7 +5457,8 @@ if enabled(40)
             end
             saveas(gcf, [rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Single_Neuron_Spindle_Rastor_M1.fig'])
             close all
-                        
+               
+            %plot peak polar hostogram
             t = circ_mean(M1_peak_spike_phases');
             r = circ_r(M1_peak_spike_phases');
             
@@ -5375,6 +5470,7 @@ if enabled(40)
             end
             close all
             
+            %plot tail polar hostogram
             t = circ_mean(M1_tail_spike_phases');
             r = circ_r(M1_tail_spike_phases');
             polarhistogram(M1_tail_spike_phases,20,'FaceColor', [0.3 0.7 1.0], 'FaceAlpha', 1, 'Normalization', 'pdf');
@@ -5385,6 +5481,8 @@ if enabled(40)
             end
             close all
             
+            %Cb
+            %plot rastor
             hold on
             for x = 1:size(Cb_spike_bools,2)
                 for y = 1:min([size(Cb_spike_bools,1), max_to_plot])
@@ -5400,6 +5498,7 @@ if enabled(40)
             saveas(gcf, [rootpath,animal,'/Day',num2str(day),'/',param.s_block_names{block},'/Single_Neuron_Spindle_Rastor_Cb.fig'])
             close all
             
+            %plot peak polar hostogram
             t = circ_mean(Cb_peak_spike_phases');
             r = circ_r(Cb_peak_spike_phases');
             polarhistogram(Cb_peak_spike_phases,20,'FaceColor', [0.4 0.4 0.8], 'FaceAlpha', 1, 'Normalization', 'pdf');
@@ -5410,6 +5509,7 @@ if enabled(40)
             end
             close all
             
+            %plot tail polar hostogram
             t = circ_mean(Cb_tail_spike_phases');
             r = circ_r(Cb_tail_spike_phases');
             polarhistogram(Cb_tail_spike_phases,20,'FaceColor', [0.3 0.7 1.0], 'FaceAlpha', 1, 'Normalization', 'pdf');
@@ -5435,6 +5535,7 @@ if enabled(41)
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_data.mat'])
+            %Collect spindle indexs
             M1_spin = M1_data.spindles{1}.pks;
             Cb_spin = Cb_data.spindles{1}.pks;
             M12Cb_intervals = nan(2,length(M1_spin)); %Row 1 is backward (negative intervals), 2 is forward
@@ -5454,6 +5555,7 @@ if enabled(41)
                 end
             end
             
+            %Walk through M1 and Cb spindles, collecting distances between them
             %Spindles at the ends that are not bracketed are left as NaNs. NaNs are not removed to retain pairity with *data.spindles{1}.pks
             while M1_idx <= length(M1_spin) && Cb_idx <= length(Cb_spin)
                 if M1_spin(M1_idx) == Cb_spin(Cb_idx)
@@ -5502,14 +5604,14 @@ if enabled(42)
     end
     win_start_offset = -0.5 * filt_data.Fs_LFP;
     win_end_offset = 0.5 * filt_data.Fs_LFP;
-    
+    %Main data
     spin_timestamp = filt_data.spindles{1}.pks(spindle_idx) * filt_data.Fs_LFP;
     LFP_data = filt_data.LFP(round(spin_timestamp + win_start_offset) : round(spin_timestamp + win_end_offset));
     time_data = 0:(length(LFP_data)-1);
     time_data = ((time_data * 1000)/length(LFP_data)) - 500;
     plot(time_data, LFP_data)
     close all
-    
+    %Control data
     spin_timestamp = (filt_data.spindles{1}.pks(spindle_idx) + control_offset) * filt_data.Fs_LFP;
     LFP_data = filt_data.LFP(round(spin_timestamp + win_start_offset) : round(spin_timestamp + win_end_offset));
     time_data = 0:(length(LFP_data)-1);
@@ -5528,11 +5630,14 @@ if enabled(43)
     for day = 1:param.days
         for block = 1:param.sleep_blocks
             load([rootpath,animal,'/Day',num2str((day)),'/',param.s_block_names{block},'/Sleep_data.mat'])
+            %Sum sleep durations
             sleep = sum(M1_data.sleep_idx);
             sleep = sleep/M1_data.Fs_LFP;
             sleep_time = sleep_time + sleep;
+            %Count spindles
             M1_spindles = M1_spindles + length(M1_data.spindles{1}.pks);
             Cb_spindles = Cb_spindles + length(Cb_data.spindles{1}.pks);
+            
             disp(['Block Sleep dur: ', num2str(sleep)])
         end
     end
